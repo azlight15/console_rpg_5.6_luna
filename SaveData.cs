@@ -25,7 +25,6 @@ public sealed class SaveData
     public Equipment? Armor { get; set; }
     public List<Skill> Skills { get; set; } = new();
 
-    /// <summary>从玩家实例创建一个可序列化的存档快照。</summary>
     public static SaveData FromPlayer(Player player)
     {
         return new SaveData
@@ -44,10 +43,6 @@ public sealed class SaveData
         };
     }
 
-    /// <summary>
-    /// 把经过验证的存档数据应用到玩家实例。
-    /// 装备和技能在恢复生命值之前写入 Player，确保最终属性计算正确。
-    /// </summary>
     public void ApplyTo(Player player)
     {
         player.Name = Name.Trim();
@@ -66,11 +61,10 @@ public sealed class SaveData
 }
 
 /// <summary>
-/// 负责本地档案的创建、保存和读取。
+/// 负责本地档案的创建、保存、读取和删除。
 ///
-/// v0.4.0 将单一 save.json 扩展为档案系统：
-/// 新档案保存到 saves 文件夹；旧版 save.json 也会被识别，方便平滑升级。
-/// 存档/读档都会先显示档案列表，再进行确认。
+/// v0.4.0 使用 saves 文件夹保存多个档案，并兼容旧版 save.json。
+/// 存档/读档/删档都会先显示档案列表，再进行确认。
 /// </summary>
 public static class SaveManager
 {
@@ -78,19 +72,13 @@ public static class SaveManager
     private const string SaveExtension = ".json";
     private const string LegacySaveFile = "save.json";
 
-    /// <summary>表示一个可供玩家选择的本地档案。</summary>
     private sealed record SaveProfile(string Name, string FilePath);
 
-    /// <summary>检查本地是否至少存在一个有效档案文件。</summary>
     public static bool HasAnySave()
     {
         return GetProfiles().Count > 0;
     }
 
-    /// <summary>
-    /// 显示档案列表并保存当前角色。
-    /// 选择已有档案会要求确认后覆盖；选择新建档案时会先输入档案名，再确认保存。
-    /// </summary>
     public static void Save(Player player)
     {
         List<SaveProfile> profiles = GetProfiles();
@@ -184,7 +172,6 @@ public static class SaveManager
         Program.Loading();
     }
 
-    /// <summary>显示档案列表并读取玩家选择的档案。</summary>
     public static bool Load(Player player)
     {
         List<SaveProfile> profiles = GetProfiles();
@@ -254,14 +241,68 @@ public static class SaveManager
     }
 
     /// <summary>
-    /// 读取本地档案，并兼容 v0.3 及更早版本留下的 save.json。
-    /// 损坏的档案不会进入正常列表，避免阻塞其他可用档案。
+    /// 显示档案列表并删除选中的档案。
+    /// 删除前必须二次确认，避免误删角色进度。
     /// </summary>
+    public static void Delete()
+    {
+        List<SaveProfile> profiles = GetProfiles();
+
+        if (profiles.Count == 0)
+        {
+            Console.Clear();
+            Console.WriteLine("目前没有可删除的档案。");
+            Program.Loading();
+            return;
+        }
+
+        Console.Clear();
+        Console.WriteLine("========== 删除档案 ==========");
+        PrintProfiles(profiles);
+        Console.WriteLine("0. 返回");
+        Console.Write("请选择要删除的档案：");
+
+        if (!int.TryParse(Console.ReadLine(), out int index)
+            || index < 0
+            || index > profiles.Count)
+        {
+            Console.WriteLine("输入无效。");
+            Program.Loading();
+            return;
+        }
+
+        if (index == 0)
+        {
+            return;
+        }
+
+        SaveProfile selected = profiles[index - 1];
+        if (!Confirm($"确定永久删除档案“{selected.Name}”吗？此操作无法撤销。"))
+        {
+            return;
+        }
+
+        try
+        {
+            File.Delete(selected.FilePath);
+            Console.WriteLine($"档案“{selected.Name}”已删除。");
+        }
+        catch (IOException ex)
+        {
+            Console.WriteLine($"删除失败：{ex.Message}");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Console.WriteLine("删除失败：当前目录没有删除权限。");
+        }
+
+        Program.Loading();
+    }
+
     private static List<SaveProfile> GetProfiles()
     {
         List<SaveProfile> profiles = new();
 
-        // 兼容升级前的单文件存档，避免用户更新版本后看不到自己的旧进度。
         if (File.Exists(LegacySaveFile))
         {
             TryAddProfile(profiles, LegacySaveFile);
@@ -280,7 +321,6 @@ public static class SaveManager
             .ToList();
     }
 
-    /// <summary>尝试从一个 JSON 文件建立档案列表项。</summary>
     private static void TryAddProfile(List<SaveProfile> profiles, string filePath)
     {
         try
@@ -303,7 +343,6 @@ public static class SaveManager
         }
     }
 
-    /// <summary>打印统一的档案列表。</summary>
     private static void PrintProfiles(List<SaveProfile> profiles)
     {
         if (profiles.Count == 0)
@@ -318,7 +357,6 @@ public static class SaveManager
         }
     }
 
-    /// <summary>请求玩家确认危险操作。</summary>
     private static bool Confirm(string message)
     {
         Console.Write($"{message} (Y/N)：");
@@ -327,7 +365,6 @@ public static class SaveManager
         return choice is 'Y' or 'y';
     }
 
-    /// <summary>根据档案名生成文件路径，并替换 Windows 文件名中的非法字符。</summary>
     private static string GetProfilePath(string profileName)
     {
         char[] invalidChars = Path.GetInvalidFileNameChars();
