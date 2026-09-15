@@ -5,7 +5,10 @@ namespace Console_RPG;
 /// <summary>处理主菜单中的场外治疗。</summary>
 public static class Heal
 {
-    /// <summary>恢复玩家生命值，并确保结果不会超过最大生命值。</summary>
+    /// <summary>
+    /// 消耗一次治疗资源恢复玩家生命值。
+    /// 场外治疗与战斗治疗共用同一资源，避免无限免费回血。
+    /// </summary>
     public static void Use(Player player)
     {
         Console.Clear();
@@ -17,11 +20,16 @@ public static class Heal
             return;
         }
 
-        double oldHp = player.Hp;
-        player.Hp = Math.Min(player.MaxHp, player.Hp + player.Treatment);
+        if (player.TreatmentCount <= 0)
+        {
+            Console.WriteLine("你已经没有治疗资源了！");
+            Program.Loading();
+            return;
+        }
 
-        double recovered = player.Hp - oldHp;
+        double recovered = player.UseTreatment();
         Console.WriteLine($"你恢复了 {recovered:0.#} HP。\n当前 HP：{player.Hp:0.#}/{player.MaxHp:0.#}");
+        Console.WriteLine($"剩余治疗资源：{player.TreatmentCount}");
 
         Program.Loading();
     }
