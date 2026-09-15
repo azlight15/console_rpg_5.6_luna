@@ -28,10 +28,7 @@ public static class UpLevel
         double requiredExp = player.ExpToNextLevel;
         player.Exp -= requiredExp;
         player.Level++;
-
-        player.MaxHp += 20;
-        player.Attack += 5;
-        player.Hp = player.MaxHp;
+        player.ApplyLevelUp();
 
         Console.WriteLine();
         Console.ForegroundColor = ConsoleColor.Yellow;
@@ -40,6 +37,7 @@ public static class UpLevel
         Console.WriteLine($"当前等级：{player.Level}");
         Console.WriteLine("最大 HP +20");
         Console.WriteLine("攻击力 +5");
+        Console.WriteLine("获得 1 次额外治疗资源");
         Console.WriteLine("HP 已完全恢复");
     }
 }
