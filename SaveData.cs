@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
@@ -7,6 +8,7 @@ namespace Console_RPG;
 /// <summary>
 /// JSON 存档的数据传输模型。
 /// 只保存需要持久化的玩家状态，不直接承担运行时逻辑。
+/// v0.4.0 开始同时保存当前装备和已学习技能。
 /// </summary>
 public sealed class SaveData
 {
@@ -18,6 +20,9 @@ public sealed class SaveData
     public double Attack { get; set; }
     public double Treatment { get; set; }
     public int TreatmentCount { get; set; }
+    public Equipment? Weapon { get; set; }
+    public Equipment? Armor { get; set; }
+    public List<Skill> Skills { get; set; } = new();
 
     /// <summary>从玩家实例创建一个可序列化的存档快照。</summary>
     public static SaveData FromPlayer(Player player)
@@ -31,17 +36,31 @@ public sealed class SaveData
             MaxHp = player.MaxHp,
             Attack = player.Attack,
             Treatment = player.Treatment,
-            TreatmentCount = player.TreatmentCount
+            TreatmentCount = player.TreatmentCount,
+            Weapon = player.Weapon,
+            Armor = player.Armor,
+            Skills = new List<Skill>(player.Skills)
         };
     }
 
-    /// <summary>把经过验证的存档数据应用到玩家实例。</summary>
+    /// <summary>
+    /// 把经过验证的存档数据应用到玩家实例。
+    /// 装备和技能在恢复生命值之前写入 Player，确保最终属性计算正确。
+    /// </summary>
     public void ApplyTo(Player player)
     {
         player.Name = Name.Trim();
         player.Level = Level;
         player.Exp = Exp;
-        player.RestoreFromSave(MaxHp, Hp, Attack, Treatment, TreatmentCount);
+        player.RestoreFromSave(
+            MaxHp,
+            Hp,
+            Attack,
+            Treatment,
+            TreatmentCount,
+            Weapon,
+            Armor,
+            Skills);
     }
 }
 
@@ -115,15 +134,20 @@ public static class SaveManager
 
     private static bool IsValid(SaveData? data)
     {
-        return data is not null
-            && !string.IsNullOrWhiteSpace(data.Name)
-            && data.Level >= 1
-            && data.Exp >= 0
-            && data.MaxHp > 0
-            && data.Hp >= 0
-            && data.Hp <= data.MaxHp
-            && data.Attack > 0
-            && data.Treatment >= 0
-            && data.TreatmentCount >= 0;
+        if (data is null
+            || string.IsNullOrWhiteSpace(data.Name)
+            || data.Level < 1
+            || data.Exp < 0
+            || data.MaxHp <= 0
+            || data.Hp < 0
+            || data.Attack <= 0
+            || data.Treatment < 0
+            || data.TreatmentCount < 0)
+        {
+            return false;
+        }
+
+        double armorBonus = data.Armor?.HpBonus ?? 0;
+        return data.Hp <= data.MaxHp + armorBonus;
     }
 }
