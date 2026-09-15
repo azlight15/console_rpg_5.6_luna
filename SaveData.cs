@@ -89,7 +89,7 @@ public static class SaveManager
 
     /// <summary>
     /// 显示档案列表并保存当前角色。
-    /// 选择已有档案会要求确认后覆盖；选择新建档案则使用当前角色名创建档案。
+    /// 选择已有档案会要求确认后覆盖；选择新建档案时会先输入档案名，再确认保存。
     /// </summary>
     public static void Save(Player player)
     {
@@ -121,10 +121,15 @@ public static class SaveManager
 
         if (index == profiles.Count + 1)
         {
-            profileName = player.Name.Trim();
+            Console.Write($"请输入新档案名称（直接回车使用角色名“{player.Name}”）：");
+            string? inputName = Console.ReadLine();
+            profileName = string.IsNullOrWhiteSpace(inputName)
+                ? player.Name.Trim()
+                : inputName.Trim();
+
             if (string.IsNullOrWhiteSpace(profileName))
             {
-                Console.WriteLine("当前角色没有有效名称，无法创建档案。");
+                Console.WriteLine("档案名称不能为空。");
                 Program.Loading();
                 return;
             }
@@ -137,6 +142,10 @@ public static class SaveManager
                 {
                     return;
                 }
+            }
+            else if (!Confirm($"确定将当前进度保存为档案“{profileName}”吗？"))
+            {
+                return;
             }
         }
         else
