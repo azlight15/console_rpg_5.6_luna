@@ -5,6 +5,7 @@ namespace Console_RPG;
 /// <summary>
 /// 游戏入口与主菜单。
 /// Program 持有当前玩家实例，并将它显式传给需要操作角色状态的系统。
+/// v0.4.0 开始在新游戏中初始化装备与技能，并提供装备管理入口。
 /// </summary>
 public static class Program
 {
@@ -13,6 +14,9 @@ public static class Program
 
     private static void Main()
     {
+        EquipmentManager.InitializeStarterEquipment(_player);
+        SkillSystem.InitializeStarterSkills(_player);
+
         StartMenu();
         GameConfirmed();
 
@@ -46,7 +50,7 @@ public static class Program
         }
     }
 
-    /// <summary>展示新游戏的初始状态。</summary>
+    /// <summary>展示新游戏的初始状态，包括装备和技能。</summary>
     private static void GameConfirmed()
     {
         Console.Clear();
@@ -54,8 +58,11 @@ public static class Program
         Console.WriteLine("角色创建完成！");
         Console.WriteLine($"名字：{_player.Name}");
         Console.WriteLine($"等级：{_player.Level}");
-        Console.WriteLine($"HP：{_player.Hp}/{_player.MaxHp}");
-        Console.WriteLine($"攻击力：{_player.Attack}");
+        Console.WriteLine($"HP：{_player.Hp:0.#}/{_player.FinalMaxHp:0.#}");
+        Console.WriteLine($"攻击力：{_player.FinalAttack:0.#}");
+        Console.WriteLine($"武器：{_player.Weapon?.Name ?? "无"}");
+        Console.WriteLine($"防具：{_player.Armor?.Name ?? "无"}");
+        Console.WriteLine($"技能：{_player.Skills.Count} 个");
         Console.WriteLine($"治疗资源：{_player.TreatmentCount}（每次恢复 {_player.Treatment:0.#} HP）");
         Console.WriteLine("================================");
         Console.WriteLine("按任意键开始游戏");
@@ -72,18 +79,19 @@ public static class Program
         Console.WriteLine("1. 开始战斗");
         Console.WriteLine("2. 治疗");
         Console.WriteLine("3. 查看状态");
-        Console.WriteLine("4. 存档");
-        Console.WriteLine("5. 读档");
-        Console.WriteLine("6. 退出游戏");
+        Console.WriteLine("4. 装备管理");
+        Console.WriteLine("5. 存档");
+        Console.WriteLine("6. 读档");
+        Console.WriteLine("7. 退出游戏");
         Console.WriteLine("=========================");
         Console.Write("请选择：");
 
         while (true)
         {
-            if (!int.TryParse(Console.ReadLine(), out int option) || option is < 1 or > 6)
+            if (!int.TryParse(Console.ReadLine(), out int option) || option is < 1 or > 7)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.Write("输入无效，请输入 1-6：");
+                Console.Write("输入无效，请输入 1-7：");
                 Console.ResetColor();
                 continue;
             }
@@ -100,12 +108,15 @@ public static class Program
                     ShowStatus.Display(_player);
                     return;
                 case 4:
-                    SaveManager.Save(_player);
+                    EquipmentManager.ShowMenu(_player);
                     return;
                 case 5:
-                    SaveManager.Load(_player);
+                    SaveManager.Save(_player);
                     return;
                 case 6:
+                    SaveManager.Load(_player);
+                    return;
+                case 7:
                     Console.Clear();
                     Console.WriteLine("感谢游玩 Console RPG！下次再见，勇者！");
                     _running = false;
