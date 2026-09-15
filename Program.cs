@@ -5,7 +5,7 @@ namespace Console_RPG;
 /// <summary>
 /// 游戏入口与主菜单。
 /// Program 持有当前玩家实例，并将它显式传给需要操作角色状态的系统。
-/// v0.4.0 开始在启动时检测本地档案，并在存档/读档时使用档案列表。
+/// v0.4.0 开始在启动时检测本地档案，并在存档/读档/删档时使用档案列表。
 /// </summary>
 public static class Program
 {
@@ -26,10 +26,6 @@ public static class Program
         }
     }
 
-    /// <summary>
-    /// 启动时检测本地档案。
-    /// 检测到档案时，先让玩家选择读取已有档案或创建新角色，避免读档前被强制要求注册名字。
-    /// </summary>
     private static void StartMenu()
     {
         if (SaveManager.HasAnySave())
@@ -54,15 +50,12 @@ public static class Program
                             return;
                         }
                         break;
-
                     case "2":
                         RegisterNewPlayer();
                         return;
-
                     case "0":
                         _running = false;
                         return;
-
                     default:
                         Console.WriteLine("输入无效，请选择 0-2。");
                         Loading();
@@ -74,7 +67,6 @@ public static class Program
         RegisterNewPlayer();
     }
 
-    /// <summary>创建新游戏时读取玩家名称。</summary>
     private static void RegisterNewPlayer()
     {
         Console.Clear();
@@ -96,7 +88,6 @@ public static class Program
         }
     }
 
-    /// <summary>展示当前角色状态，包括装备和技能。</summary>
     private static void GameConfirmed()
     {
         if (!_running)
@@ -133,16 +124,17 @@ public static class Program
         Console.WriteLine("4. 装备管理");
         Console.WriteLine("5. 存档");
         Console.WriteLine("6. 读档");
-        Console.WriteLine("7. 退出游戏");
+        Console.WriteLine("7. 删除档案");
+        Console.WriteLine("8. 退出游戏");
         Console.WriteLine("=========================");
         Console.Write("请选择：");
 
         while (true)
         {
-            if (!int.TryParse(Console.ReadLine(), out int option) || option is < 1 or > 7)
+            if (!int.TryParse(Console.ReadLine(), out int option) || option is < 1 or > 8)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.Write("输入无效，请输入 1-7：");
+                Console.Write("输入无效，请输入 1-8：");
                 Console.ResetColor();
                 continue;
             }
@@ -168,6 +160,9 @@ public static class Program
                     SaveManager.Load(_player);
                     return;
                 case 7:
+                    SaveManager.Delete();
+                    return;
+                case 8:
                     Console.Clear();
                     Console.WriteLine("感谢游玩 Console RPG！下次再见，勇者！");
                     _running = false;
@@ -176,7 +171,6 @@ public static class Program
         }
     }
 
-    /// <summary>暂停当前界面，等待玩家返回上一级菜单。</summary>
     public static void Loading()
     {
         Console.WriteLine("\n按任意键继续...");
