@@ -6,7 +6,7 @@ namespace Console_RPG;
 
 /// <summary>
 /// JSON 存档的数据传输模型。
-/// 只保存需要持久化的玩家状态，不直接暴露运行时逻辑。
+/// 只保存需要持久化的玩家状态，不直接承担运行时逻辑。
 /// </summary>
 public sealed class SaveData
 {
@@ -17,6 +17,33 @@ public sealed class SaveData
     public double MaxHp { get; set; }
     public double Attack { get; set; }
     public double Treatment { get; set; }
+
+    /// <summary>从玩家实例创建一个可序列化的存档快照。</summary>
+    public static SaveData FromPlayer(Player player)
+    {
+        return new SaveData
+        {
+            Name = player.Name,
+            Level = player.Level,
+            Exp = player.Exp,
+            Hp = player.Hp,
+            MaxHp = player.MaxHp,
+            Attack = player.Attack,
+            Treatment = player.Treatment
+        };
+    }
+
+    /// <summary>把经过验证的存档数据应用到玩家实例。</summary>
+    public void ApplyTo(Player player)
+    {
+        player.Name = Name.Trim();
+        player.Level = Level;
+        player.Exp = Exp;
+        player.MaxHp = MaxHp;
+        player.Hp = Math.Clamp(Hp, 0, MaxHp);
+        player.Attack = Attack;
+        player.Treatment = Treatment;
+    }
 }
 
 /// <summary>负责把玩家状态写入本地 JSON，并在读取时进行基本校验。</summary>
@@ -25,21 +52,11 @@ public static class SaveManager
     private const string SaveFile = "save.json";
 
     /// <summary>保存当前角色状态。</summary>
-    public static void Save()
+    public static void Save(Player player)
     {
         try
         {
-            SaveData data = new()
-            {
-                Name = PlayerStatistics.Name,
-                Level = PlayerStatistics.Level,
-                Exp = PlayerStatistics.Exp,
-                Hp = PlayerStatistics.Hp,
-                MaxHp = PlayerStatistics.MaxHp,
-                Attack = PlayerStatistics.Attack,
-                Treatment = PlayerStatistics.Treatment
-            };
-
+            SaveData data = SaveData.FromPlayer(player);
             string json = JsonSerializer.Serialize(data, new JsonSerializerOptions
             {
                 WriteIndented = true
@@ -61,7 +78,7 @@ public static class SaveManager
     }
 
     /// <summary>读取存档，并在数据明显异常时拒绝加载。</summary>
-    public static void Load()
+    public static void Load(Player player)
     {
         if (!File.Exists(SaveFile))
         {
@@ -82,14 +99,7 @@ public static class SaveManager
                 return;
             }
 
-            PlayerStatistics.Name = data!.Name.Trim();
-            PlayerStatistics.Level = data.Level;
-            PlayerStatistics.Exp = data.Exp;
-            PlayerStatistics.MaxHp = data.MaxHp;
-            PlayerStatistics.Hp = Math.Clamp(data.Hp, 0, data.MaxHp);
-            PlayerStatistics.Attack = data.Attack;
-            PlayerStatistics.Treatment = data.Treatment;
-
+            data!.ApplyTo(player);
             Console.WriteLine("存档读取成功！");
         }
         catch (JsonException)
