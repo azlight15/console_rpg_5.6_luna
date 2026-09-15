@@ -1,21 +1,20 @@
 namespace Console_RPG;
 
-/*
-    PlayerStatistics 用于保存玩家的全局状态数据。
-    包含等级、经验、血量、攻击力等核心属性。
-    所有战斗、升级、治疗、存档模块都会直接读取或修改这里的数据。
-*/
+/// <summary>
+/// 保存当前玩家状态。
+/// 目前项目仍使用简单的全局状态模型；后续如果系统继续扩张，可以再演进为 Player 实体。
+/// </summary>
 public static class PlayerStatistics
 {
-    public static string Name = null!;   // 玩家名字
-    public static int Level = 1;         // 玩家等级
-    public static double Exp = 0;        // 当前经验值
+    public static string Name { get; set; } = "";
+    public static int Level { get; set; } = 1;
+    public static double Exp { get; set; }
 
-    // 当前等级升级所需经验
+    /// <summary>当前等级对应的升级经验需求。</summary>
     public static double ExpToNextLevel => Level * 100;
 
-    public static double Hp = 100;       // 当前血量
-    public static double MaxHp = 100;    // 最大血量
-    public static double Attack = 15;    // 攻击力
-    public static double Treatment = 50; // 每次治疗恢复的血量
+    public static double Hp { get; set; } = 100;
+    public static double MaxHp { get; set; } = 100;
+    public static double Attack { get; set; } = 15;
+    public static double Treatment { get; set; } = 50;
 }
