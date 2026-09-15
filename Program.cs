@@ -4,11 +4,12 @@ namespace Console_RPG;
 
 /// <summary>
 /// 游戏入口与主菜单。
-/// Luna 版将输入校验、菜单分发和退出流程集中在这里，避免无效输入直接导致程序崩溃。
+/// Program 持有当前玩家实例，并将它显式传给需要操作角色状态的系统。
 /// </summary>
 public static class Program
 {
     private static bool _running = true;
+    private static readonly Player _player = new();
 
     private static void Main()
     {
@@ -35,7 +36,7 @@ public static class Program
             string? name = Console.ReadLine();
             if (!string.IsNullOrWhiteSpace(name))
             {
-                PlayerStatistics.Name = name.Trim();
+                _player.Name = name.Trim();
                 return;
             }
 
@@ -51,16 +52,16 @@ public static class Program
         Console.Clear();
         Console.WriteLine("================================");
         Console.WriteLine("角色创建完成！");
-        Console.WriteLine($"名字：{PlayerStatistics.Name}");
-        Console.WriteLine($"等级：{PlayerStatistics.Level}");
-        Console.WriteLine($"HP：{PlayerStatistics.Hp}/{PlayerStatistics.MaxHp}");
-        Console.WriteLine($"攻击力：{PlayerStatistics.Attack}");
+        Console.WriteLine($"名字：{_player.Name}");
+        Console.WriteLine($"等级：{_player.Level}");
+        Console.WriteLine($"HP：{_player.Hp}/{_player.MaxHp}");
+        Console.WriteLine($"攻击力：{_player.Attack}");
         Console.WriteLine("================================");
         Console.WriteLine("按任意键开始游戏");
         Console.ReadKey(true);
     }
 
-    /// <summary>显示主菜单，并把玩家选择交给对应系统处理。</summary>
+    /// <summary>显示主菜单，并把当前玩家交给对应系统处理。</summary>
     private static void OptionsMenu()
     {
         Console.Clear();
@@ -89,19 +90,19 @@ public static class Program
             switch (option)
             {
                 case 1:
-                    Battle.StartBattle();
+                    Battle.StartBattle(_player);
                     return;
                 case 2:
-                    Heal.Use();
+                    Heal.Use(_player);
                     return;
                 case 3:
-                    ShowStatus.Display();
+                    ShowStatus.Display(_player);
                     return;
                 case 4:
-                    SaveManager.Save();
+                    SaveManager.Save(_player);
                     return;
                 case 5:
-                    SaveManager.Load();
+                    SaveManager.Load(_player);
                     return;
                 case 6:
                     Console.Clear();
