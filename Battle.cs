@@ -191,8 +191,8 @@ public static class Battle
         Console.WriteLine("========== 技能 ==========");
         for (int i = 0; i < player.Skills.Count; i++)
         {
-            Skill skill = player.Skills[i];
-            Console.WriteLine($"{i + 1}. {skill.Name} - {skill.Description}");
+            Skill currentSkill = player.Skills[i];
+            Console.WriteLine($"{i + 1}. {currentSkill.Name} - {currentSkill.Description}");
         }
         Console.WriteLine("0. 返回");
         Console.Write("请选择技能：");
@@ -216,22 +216,22 @@ public static class Battle
             return false;
         }
 
-        Skill skill = player.Skills[index - 1];
+        Skill selectedSkill = player.Skills[index - 1];
 
         if (Random.Shared.Next(100) < monster.EvasionRate)
         {
-            Console.WriteLine($"{monster.Name} 闪避了你的 {skill.Name}！");
+            Console.WriteLine($"{monster.Name} 闪避了你的 {selectedSkill.Name}！");
             return true;
         }
 
-        double damage = SkillSystem.UseSkill(player, monster, skill, out bool critical);
+        double damage = SkillSystem.UseSkill(player, monster, selectedSkill, out bool critical);
 
         if (critical)
         {
             Console.WriteLine("技能暴击！");
         }
 
-        Console.WriteLine($"你使用了 {skill.Name}，造成 {damage:0.#} 点伤害！");
+        Console.WriteLine($"你使用了 {selectedSkill.Name}，造成 {damage:0.#} 点伤害！");
         return true;
     }
 
