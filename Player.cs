@@ -1,20 +1,20 @@
 namespace Console_RPG;
 
 /// <summary>
-/// 保存当前玩家状态。
-/// 目前项目仍使用简单的全局状态模型；后续如果系统继续扩张，可以再演进为 Player 实体。
+/// 表示游戏中的玩家角色及其当前状态。
+/// 玩家数据通过实例传递给各个系统，避免依赖全局静态状态。
 /// </summary>
-public static class PlayerStatistics
+public sealed class Player
 {
-    public static string Name { get; set; } = "";
-    public static int Level { get; set; } = 1;
-    public static double Exp { get; set; }
+    public string Name { get; set; } = "";
+    public int Level { get; set; } = 1;
+    public double Exp { get; set; }
 
     /// <summary>当前等级对应的升级经验需求。</summary>
-    public static double ExpToNextLevel => Level * 100;
+    public double ExpToNextLevel => Level * 100;
 
-    public static double Hp { get; set; } = 100;
-    public static double MaxHp { get; set; } = 100;
-    public static double Attack { get; set; } = 15;
-    public static double Treatment { get; set; } = 50;
+    public double Hp { get; set; } = 100;
+    public double MaxHp { get; set; } = 100;
+    public double Attack { get; set; } = 15;
+    public double Treatment { get; set; } = 50;
 }
