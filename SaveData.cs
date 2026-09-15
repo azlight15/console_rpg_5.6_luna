@@ -68,13 +68,15 @@ public sealed class SaveData
 /// <summary>
 /// 负责本地档案的创建、保存和读取。
 ///
-/// v0.4.0 将单一 save.json 改为 saves 文件夹中的多个档案：
-/// 主菜单的存档/读档都会先显示档案列表，再进行确认。
+/// v0.4.0 将单一 save.json 扩展为档案系统：
+/// 新档案保存到 saves 文件夹；旧版 save.json 也会被识别，方便平滑升级。
+/// 存档/读档都会先显示档案列表，再进行确认。
 /// </summary>
 public static class SaveManager
 {
     private const string SaveDirectory = "saves";
     private const string SaveExtension = ".json";
+    private const string LegacySaveFile = "save.json";
 
     /// <summary>表示一个可供玩家选择的本地档案。</summary>
     private sealed record SaveProfile(string Name, string FilePath);
@@ -174,7 +176,7 @@ public static class SaveManager
     }
 
     /// <summary>显示档案列表并读取玩家选择的档案。</summary>
-    public static void Load(Player player)
+    public static bool Load(Player player)
     {
         List<SaveProfile> profiles = GetProfiles();
 
@@ -183,7 +185,7 @@ public static class SaveManager
             Console.Clear();
             Console.WriteLine("目前没有可读取的档案。");
             Program.Loading();
-            return;
+            return false;
         }
 
         Console.Clear();
@@ -198,18 +200,18 @@ public static class SaveManager
         {
             Console.WriteLine("输入无效。");
             Program.Loading();
-            return;
+            return false;
         }
 
         if (index == 0)
         {
-            return;
+            return false;
         }
 
         SaveProfile selected = profiles[index - 1];
         if (!Confirm($"确定读取档案“{selected.Name}”吗？当前未保存的进度会被覆盖。"))
         {
-            return;
+            return false;
         }
 
         try
@@ -221,11 +223,13 @@ public static class SaveManager
             {
                 Console.WriteLine("档案数据无效，未加载该档案。");
                 Program.Loading();
-                return;
+                return false;
             }
 
             data!.ApplyTo(player);
             Console.WriteLine($"档案“{selected.Name}”读取成功！");
+            Program.Loading();
+            return true;
         }
         catch (JsonException)
         {
@@ -237,43 +241,57 @@ public static class SaveManager
         }
 
         Program.Loading();
+        return false;
     }
 
-    /// <summary>读取本地档案目录，并只返回能够识别的有效档案。</summary>
+    /// <summary>
+    /// 读取本地档案，并兼容 v0.3 及更早版本留下的 save.json。
+    /// 损坏的档案不会进入正常列表，避免阻塞其他可用档案。
+    /// </summary>
     private static List<SaveProfile> GetProfiles()
     {
-        if (!Directory.Exists(SaveDirectory))
-        {
-            return new List<SaveProfile>();
-        }
-
         List<SaveProfile> profiles = new();
 
-        foreach (string filePath in Directory.GetFiles(SaveDirectory, $"*{SaveExtension}"))
+        // 兼容升级前的单文件存档，避免用户更新版本后看不到自己的旧进度。
+        if (File.Exists(LegacySaveFile))
         {
-            try
-            {
-                string json = File.ReadAllText(filePath);
-                SaveData? data = JsonSerializer.Deserialize<SaveData>(json);
+            TryAddProfile(profiles, LegacySaveFile);
+        }
 
-                if (IsValid(data))
-                {
-                    profiles.Add(new SaveProfile(data!.Name.Trim(), filePath));
-                }
-            }
-            catch (JsonException)
+        if (Directory.Exists(SaveDirectory))
+        {
+            foreach (string filePath in Directory.GetFiles(SaveDirectory, $"*{SaveExtension}"))
             {
-                // 损坏的档案不进入正常列表，避免阻塞其他可用档案。
-            }
-            catch (IOException)
-            {
-                // 单个文件读取失败时跳过它，继续扫描其他档案。
+                TryAddProfile(profiles, filePath);
             }
         }
 
         return profiles
             .OrderBy(profile => profile.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    /// <summary>尝试从一个 JSON 文件建立档案列表项。</summary>
+    private static void TryAddProfile(List<SaveProfile> profiles, string filePath)
+    {
+        try
+        {
+            string json = File.ReadAllText(filePath);
+            SaveData? data = JsonSerializer.Deserialize<SaveData>(json);
+
+            if (IsValid(data))
+            {
+                profiles.Add(new SaveProfile(data!.Name.Trim(), filePath));
+            }
+        }
+        catch (JsonException)
+        {
+            // 损坏的档案不进入正常列表。
+        }
+        catch (IOException)
+        {
+            // 单个文件读取失败时跳过它，继续扫描其他档案。
+        }
     }
 
     /// <summary>打印统一的档案列表。</summary>
