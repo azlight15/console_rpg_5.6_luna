@@ -56,6 +56,7 @@ public static class Program
         Console.WriteLine($"等级：{_player.Level}");
         Console.WriteLine($"HP：{_player.Hp}/{_player.MaxHp}");
         Console.WriteLine($"攻击力：{_player.Attack}");
+        Console.WriteLine($"治疗资源：{_player.TreatmentCount}（每次恢复 {_player.Treatment:0.#} HP）");
         Console.WriteLine("================================");
         Console.WriteLine("按任意键开始游戏");
         Console.ReadKey(true);
