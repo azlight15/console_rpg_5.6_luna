@@ -1,83 +1,77 @@
-// ==========================
-// 怪物工厂
-// 负责根据玩家等级随机生成战斗怪物
-// ==========================
-
 using System;
 
 namespace Console_RPG;
 
-/*
-    MonsterFactory 用于创建战斗中使用的怪物对象。
-    每次调用都会随机生成一种怪物，并根据玩家等级进行数值缩放。
-    同时存在一定概率生成精英怪物。
-*/
+/// <summary>
+/// 根据玩家等级生成随机敌人。
+/// 怪物的基础模板在这里定义，战斗系统只负责使用生成后的数据。
+/// </summary>
 public static class MonsterFactory
 {
-    /*
-        对外提供获取怪物的入口
-        每次访问都会创建一个新的怪物实例
-    */
-    public static MonsterStatistics Monster => CreateMonster();
-
-    /*
-        创建怪物实例
-        根据玩家等级动态计算怪物属性
-    */
-    private static MonsterStatistics CreateMonster()
+    /// <summary>创建一个新的随机怪物实例。</summary>
+    public static MonsterStatistics Create()
     {
-        // 随机怪物类型（1~3）
+        int playerLevel = PlayerStatistics.Level;
         int type = Random.Shared.Next(1, 4);
-
-        // 是否生成精英怪（10%概率）
         bool isElite = Random.Shared.Next(100) < 10;
 
-        // 获取玩家等级用于数值缩放
-        int playerLevel = PlayerStatistics.Level;
-        
-        MonsterStatistics monster = new MonsterStatistics();
-
-        // 根据不同类型初始化怪物基础属性
-        switch (type)
+        MonsterStatistics monster = type switch
         {
-            case 1:
-                monster.Name = "史莱姆";
-                monster.Level = Math.Max(1, playerLevel - 1);
-                monster.MaxHp = 30 + monster.Level * 4;
-                monster.Attack = 5 + monster.Level * 1;
-                monster.ExpReward = 30 + monster.Level * 10;
-                break;
+            1 => CreateSlime(playerLevel),
+            2 => CreateGoblin(playerLevel),
+            3 => CreateSkeleton(playerLevel),
+            _ => throw new InvalidOperationException("未知的怪物类型。")
+        };
 
-            case 2:
-                monster.Name = "哥布林";
-                monster.Level = playerLevel;
-                monster.MaxHp = 50 + monster.Level * 5;
-                monster.Attack = 8 + monster.Level * 2;
-                monster.ExpReward = 50 + monster.Level * 15;
-                break;
-
-            case 3:
-                monster.Name = "骷髅兵";
-                monster.Level = playerLevel + 1;
-                monster.MaxHp = 70 + monster.Level * 6;
-                monster.Attack = 10 + monster.Level * 3;
-                monster.ExpReward = 70 + monster.Level * 20;
-                break;
-        }
-
-        // 如果是精英怪，则强化属性
         if (isElite)
         {
-            monster.Name = "[精英]" + monster.Name;
-            monster.Level = playerLevel + 3;
+            monster.Name = $"[精英] {monster.Name}";
+            monster.Level += 2;
             monster.MaxHp *= 1.5;
             monster.Attack *= 1.5;
             monster.ExpReward *= 1.5;
         }
 
-        // 初始化当前血量
         monster.Hp = monster.MaxHp;
-
         return monster;
+    }
+
+    private static MonsterStatistics CreateSlime(int playerLevel)
+    {
+        int level = Math.Max(1, playerLevel - 1);
+        return new MonsterStatistics
+        {
+            Name = "史莱姆",
+            Level = level,
+            MaxHp = 30 + level * 4,
+            Attack = 5 + level,
+            ExpReward = 30 + level * 10
+        };
+    }
+
+    private static MonsterStatistics CreateGoblin(int playerLevel)
+    {
+        int level = playerLevel;
+        return new MonsterStatistics
+        {
+            Name = "哥布林",
+            Level = level,
+            MaxHp = 50 + level * 5,
+            Attack = 8 + level * 2,
+            ExpReward = 50 + level * 15
+        };
+    }
+
+    private static MonsterStatistics CreateSkeleton(int playerLevel)
+    {
+        int level = playerLevel + 1;
+        return new MonsterStatistics
+        {
+            Name = "骷髅兵",
+            Level = level,
+            MaxHp = 70 + level * 6,
+            Attack = 10 + level * 3,
+            ExpReward = 70 + level * 20
+        };
     }
 }
