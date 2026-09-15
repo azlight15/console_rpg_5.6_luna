@@ -5,10 +5,11 @@ namespace Console_RPG;
 /// <summary>
 /// 回合制战斗系统。
 ///
-/// v0.3.0 开始加入基础战斗变化：
-/// - 普通攻击存在暴击与闪避概率。
-/// - 怪物类型会影响战斗表现。
-/// - 战斗计算集中管理，方便未来加入技能和状态效果。
+/// v0.4.0 将 Battle 的职责收敛为回合流程：
+/// - 普通攻击交给 DamageCalculator 计算。
+/// - 技能行动交给 SkillSystem 处理。
+/// - 治疗继续使用 Player 的治疗资源。
+/// - Battle 本身只负责输入、回合推进和战斗结果。
 /// </summary>
 public static class Battle
 {
@@ -60,19 +61,28 @@ public static class Battle
         {
             Console.Clear();
             PrintBattleStatus(player, monster);
-            Console.Write("选择行动 [A]攻击 [D]治疗 [F]撤退：");
+            Console.WriteLine("选择行动：");
+            Console.WriteLine("1. 普通攻击");
+            Console.WriteLine("2. 使用技能");
+            Console.WriteLine("3. 治疗");
+            Console.WriteLine("4. 撤退");
+            Console.Write("请选择：");
 
-            char action = char.ToUpperInvariant(Console.ReadKey(true).KeyChar);
-            Console.WriteLine(action);
+            string? action = Console.ReadLine();
             bool turnConsumed = true;
 
             switch (action)
             {
-                case 'A':
+                case "1":
                     Attack(player, monster);
                     break;
 
-                case 'D':
+                case "2":
+                    // 技能菜单返回 false 时表示没有真正使用技能，因此不消耗怪物回合。
+                    turnConsumed = UseSkill(player, monster);
+                    break;
+
+                case "3":
                     if (player.TreatmentCount <= 0)
                     {
                         Console.WriteLine("你已经没有治疗资源了！");
@@ -84,13 +94,13 @@ public static class Battle
                     HealInBattle(player);
                     break;
 
-                case 'F':
+                case "4":
                     Console.WriteLine("你撤退了。");
                     Pause();
                     return false;
 
                 default:
-                    Console.WriteLine("无效操作，请选择 A、D 或 F。");
+                    Console.WriteLine("无效操作，请选择 1-4。");
                     turnConsumed = false;
                     Pause();
                     break;
@@ -126,13 +136,13 @@ public static class Battle
         return false;
     }
 
-    /// <summary>显示战斗双方当前状态。</summary>
+    /// <summary>显示战斗双方当前状态，包括装备后的最终攻击力。</summary>
     private static void PrintBattleStatus(Player player, MonsterStatistics monster)
     {
         Console.WriteLine("========== 战斗 ==========");
         Console.WriteLine($"{player.Name} Lv.{player.Level}");
-        Console.WriteLine($"HP：{player.Hp:0.#}/{player.MaxHp:0.#}");
-        Console.WriteLine($"攻击力：{player.Attack:0.#}");
+        Console.WriteLine($"HP：{player.Hp:0.#}/{player.FinalMaxHp:0.#}");
+        Console.WriteLine($"攻击力：{player.FinalAttack:0.#}");
         Console.WriteLine($"治疗资源：{player.TreatmentCount}");
         Console.WriteLine("--------------------------");
         Console.WriteLine($"{monster.Name} Lv.{monster.Level}");
@@ -143,8 +153,8 @@ public static class Battle
     }
 
     /// <summary>
-    /// 玩家攻击计算。
-    /// 当前版本加入基础暴击和闪避，为后续技能系统预留扩展位置。
+    /// 普通攻击流程。
+    /// 先处理怪物闪避，再由 DamageCalculator 处理基础伤害与暴击。
     /// </summary>
     private static void Attack(Player player, MonsterStatistics monster)
     {
@@ -154,17 +164,75 @@ public static class Battle
             return;
         }
 
-        double damage = player.Attack;
-        bool critical = Random.Shared.Next(100) < 10;
+        double damage = DamageCalculator.CalculateBasicDamage(player.FinalAttack, 0.10, out bool critical);
 
         if (critical)
         {
-            damage *= 1.5;
             Console.WriteLine("暴击！");
         }
 
-        monster.Hp -= damage;
+        monster.Hp = Math.Max(0, monster.Hp - damage);
         Console.WriteLine($"你攻击了 {monster.Name}，造成 {damage:0.#} 点伤害！");
+    }
+
+    /// <summary>
+    /// 显示玩家技能并执行一次技能行动。
+    /// 没有技能或输入无效时返回 false，让玩家重新选择行动。
+    /// </summary>
+    private static bool UseSkill(Player player, MonsterStatistics monster)
+    {
+        if (player.Skills.Count == 0)
+        {
+            Console.WriteLine("你目前没有学会任何技能。");
+            Pause();
+            return false;
+        }
+
+        Console.WriteLine("========== 技能 ==========");
+        for (int i = 0; i < player.Skills.Count; i++)
+        {
+            Skill skill = player.Skills[i];
+            Console.WriteLine($"{i + 1}. {skill.Name} - {skill.Description}");
+        }
+        Console.WriteLine("0. 返回");
+        Console.Write("请选择技能：");
+
+        if (!int.TryParse(Console.ReadLine(), out int index))
+        {
+            Console.WriteLine("输入无效。");
+            Pause();
+            return false;
+        }
+
+        if (index == 0)
+        {
+            return false;
+        }
+
+        if (index < 1 || index > player.Skills.Count)
+        {
+            Console.WriteLine("没有这个技能。");
+            Pause();
+            return false;
+        }
+
+        Skill skill = player.Skills[index - 1];
+
+        if (Random.Shared.Next(100) < monster.EvasionRate)
+        {
+            Console.WriteLine($"{monster.Name} 闪避了你的 {skill.Name}！");
+            return true;
+        }
+
+        double damage = SkillSystem.UseSkill(player, monster, skill, out bool critical);
+
+        if (critical)
+        {
+            Console.WriteLine("技能暴击！");
+        }
+
+        Console.WriteLine($"你使用了 {skill.Name}，造成 {damage:0.#} 点伤害！");
+        return true;
     }
 
     /// <summary>消耗治疗资源并恢复生命。</summary>
