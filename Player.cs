@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Console_RPG;
 
 /// <summary>
@@ -17,19 +19,12 @@ public sealed class Player
     public double MaxHp { get; private set; } = 100;
     public double Attack { get; private set; } = 15;
 
-    /// <summary>当前装备的武器。</summary>
     public Equipment? Weapon { get; private set; }
-
-    /// <summary>当前装备的防具。</summary>
     public Equipment? Armor { get; private set; }
 
-    /// <summary>玩家已学习的技能。</summary>
     public List<Skill> Skills { get; } = new();
 
-    /// <summary>计算装备后的最终攻击力。</summary>
     public double FinalAttack => Attack + (Weapon?.AttackBonus ?? 0);
-
-    /// <summary>计算装备后的最终最大生命值。</summary>
     public double FinalMaxHp => MaxHp + (Armor?.HpBonus ?? 0);
 
     public double Treatment { get; private set; } = 50;
@@ -59,15 +54,9 @@ public sealed class Player
         return recovered;
     }
 
-    public void EquipWeapon(Equipment equipment)
-    {
-        Weapon = equipment;
-    }
+    public void EquipWeapon(Equipment equipment) => Weapon = equipment;
 
-    public void EquipArmor(Equipment equipment)
-    {
-        Armor = equipment;
-    }
+    public void EquipArmor(Equipment equipment) => Armor = equipment;
 
     public void LearnSkill(Skill skill)
     {
@@ -75,6 +64,19 @@ public sealed class Player
         {
             Skills.Add(skill);
         }
+    }
+
+    /// <summary>
+    /// 从存档恢复玩家基础状态。
+    /// 该方法只用于存档读取，不建议在普通游戏流程中调用。
+    /// </summary>
+    public void RestoreFromSave(int maxHp, int hp, int attack, double treatment, int treatmentCount)
+    {
+        MaxHp = maxHp;
+        Hp = System.Math.Min(hp, FinalMaxHp);
+        Attack = attack;
+        Treatment = treatment;
+        TreatmentCount = treatmentCount;
     }
 
     public void RestoreFullHealth()
