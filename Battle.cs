@@ -4,28 +4,28 @@ namespace Console_RPG;
 
 /// <summary>
 /// 回合制战斗系统。
-/// 负责战斗输入、伤害结算、胜负判断以及战斗后的经验奖励。
+/// 战斗状态通过 Player 和 MonsterStatistics 实例显式传递，不再依赖全局玩家数据。
 /// </summary>
 public static class Battle
 {
     private const int MaxHealsPerBattle = 3;
 
     /// <summary>进入连续战斗流程，直到玩家主动离开或战败。</summary>
-    public static void StartBattle()
+    public static void StartBattle(Player player)
     {
-        if (PlayerStatistics.Hp <= 0)
+        if (player.Hp <= 0)
         {
             Console.WriteLine("你目前无法战斗。");
             Program.Loading();
             return;
         }
 
-        while (PlayerStatistics.Hp > 0)
+        while (player.Hp > 0)
         {
-            MonsterStatistics monster = MonsterFactory.Create();
-            bool victory = Start(monster);
+            MonsterStatistics monster = MonsterFactory.Create(player);
+            bool victory = Start(player, monster);
 
-            if (!victory || PlayerStatistics.Hp <= 0)
+            if (!victory || player.Hp <= 0)
             {
                 return;
             }
@@ -42,7 +42,7 @@ public static class Battle
     }
 
     /// <summary>执行一场完整的单敌人战斗。</summary>
-    private static bool Start(MonsterStatistics monster)
+    private static bool Start(Player player, MonsterStatistics monster)
     {
         Console.Clear();
         Console.WriteLine($"你遇到了 {monster.Name}！");
@@ -55,10 +55,10 @@ public static class Battle
 
         int healsRemaining = MaxHealsPerBattle;
 
-        while (PlayerStatistics.Hp > 0 && monster.Hp > 0)
+        while (player.Hp > 0 && monster.Hp > 0)
         {
             Console.Clear();
-            PrintBattleStatus(monster, healsRemaining);
+            PrintBattleStatus(player, monster, healsRemaining);
             Console.Write("选择行动 [A]攻击 [D]治疗 [F]撤退：");
 
             char action = char.ToUpperInvariant(Console.ReadKey(true).KeyChar);
@@ -69,7 +69,7 @@ public static class Battle
             switch (action)
             {
                 case 'A':
-                    Attack(monster);
+                    Attack(player, monster);
                     break;
 
                 case 'D':
@@ -81,7 +81,7 @@ public static class Battle
                         break;
                     }
 
-                    HealInBattle(ref healsRemaining);
+                    HealInBattle(player, ref healsRemaining);
                     break;
 
                 case 'F':
@@ -107,16 +107,16 @@ public static class Battle
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"你击败了 {monster.Name}！");
                 Console.ResetColor();
-                UpLevel.GainExp(monster.ExpReward);
+                UpLevel.GainExp(player, monster.ExpReward);
                 Pause();
                 return true;
             }
 
-            MonsterAttack(monster);
+            MonsterAttack(player, monster);
 
-            if (PlayerStatistics.Hp <= 0)
+            if (player.Hp <= 0)
             {
-                HandleDefeat();
+                HandleDefeat(player);
                 return false;
             }
 
@@ -127,12 +127,12 @@ public static class Battle
     }
 
     /// <summary>显示本回合开始时双方的状态。</summary>
-    private static void PrintBattleStatus(MonsterStatistics monster, int healsRemaining)
+    private static void PrintBattleStatus(Player player, MonsterStatistics monster, int healsRemaining)
     {
         Console.WriteLine("========== 战斗 ==========");
-        Console.WriteLine($"{PlayerStatistics.Name} Lv.{PlayerStatistics.Level}");
-        Console.WriteLine($"HP：{PlayerStatistics.Hp:0.#}/{PlayerStatistics.MaxHp:0.#}");
-        Console.WriteLine($"攻击力：{PlayerStatistics.Attack:0.#}");
+        Console.WriteLine($"{player.Name} Lv.{player.Level}");
+        Console.WriteLine($"HP：{player.Hp:0.#}/{player.MaxHp:0.#}");
+        Console.WriteLine($"攻击力：{player.Attack:0.#}");
         Console.WriteLine("--------------------------");
         Console.WriteLine($"{monster.Name} Lv.{monster.Level}");
         Console.WriteLine($"HP：{monster.Hp:0.#}/{monster.MaxHp:0.#}");
@@ -141,44 +141,42 @@ public static class Battle
         Console.WriteLine("==========================");
     }
 
-    private static void Attack(MonsterStatistics monster)
+    private static void Attack(Player player, MonsterStatistics monster)
     {
-        monster.Hp -= PlayerStatistics.Attack;
-        Console.WriteLine($"你攻击了 {monster.Name}，造成 {PlayerStatistics.Attack:0.#} 点伤害！");
+        monster.Hp -= player.Attack;
+        Console.WriteLine($"你攻击了 {monster.Name}，造成 {player.Attack:0.#} 点伤害！");
     }
 
-    private static void HealInBattle(ref int healsRemaining)
+    private static void HealInBattle(Player player, ref int healsRemaining)
     {
-        double oldHp = PlayerStatistics.Hp;
-        PlayerStatistics.Hp = Math.Min(
-            PlayerStatistics.MaxHp,
-            PlayerStatistics.Hp + PlayerStatistics.Treatment);
+        double oldHp = player.Hp;
+        player.Hp = Math.Min(player.MaxHp, player.Hp + player.Treatment);
 
-        double recovered = PlayerStatistics.Hp - oldHp;
+        double recovered = player.Hp - oldHp;
         healsRemaining--;
         Console.WriteLine($"你恢复了 {recovered:0.#} HP，还可治疗 {healsRemaining} 次。");
     }
 
-    private static void MonsterAttack(MonsterStatistics monster)
+    private static void MonsterAttack(Player player, MonsterStatistics monster)
     {
         // 等级差只提供轻微减伤，避免高等级角色完全无视敌人攻击。
-        double damage = Math.Max(1, monster.Attack - PlayerStatistics.Level * 0.5);
-        PlayerStatistics.Hp = Math.Max(0, PlayerStatistics.Hp - damage);
+        double damage = Math.Max(1, monster.Attack - player.Level * 0.5);
+        player.Hp = Math.Max(0, player.Hp - damage);
 
         Console.ForegroundColor = ConsoleColor.Red;
         Console.WriteLine($"{monster.Name} 反击，造成 {damage:0.#} 点伤害！");
         Console.ResetColor();
     }
 
-    private static void HandleDefeat()
+    private static void HandleDefeat(Player player)
     {
         Console.ForegroundColor = ConsoleColor.DarkRed;
         Console.WriteLine("\n你倒下了……");
         Console.ResetColor();
 
         // 战败保留角色进度，但扣除少量当前经验作为失败代价。
-        PlayerStatistics.Exp *= 0.9;
-        PlayerStatistics.Hp = PlayerStatistics.MaxHp;
+        player.Exp *= 0.9;
+        player.Hp = player.MaxHp;
         Console.WriteLine("你被带回安全地点，HP 已恢复。当前经验损失 10%。");
         Pause();
     }
