@@ -2,118 +2,90 @@
 
 ***
 
-## 关于Console_RPG
+## 关于 Console_RPG
 
-这是我个人开发的一款控制台游戏，可能功能不够全，在此致歉！
+这是一个个人开发的控制台回合制 RPG。
 
-如果想玩的话，请在[GitHub](https://github.com/azlight15/console_rpg)页面下载文件
+这一版在保留原项目玩法的基础上，重新整理了角色状态、输入处理、战斗、升级、怪物生成和存档结构。
 
 ***
 
 ## 这个项目有哪些系统？
 
-现在有以下系统：
+### 1. `Program.cs`
 
-### 1.`Program.cs`
+负责程序入口、创建当前 `Player` 实例、开始菜单和主菜单。
 
-这是主程序文件，里面有：
-主函数——`Program.Main`、
-开始菜单——`Program.StartMenu`、
-确认菜单——`Program.GameConfirmed`、
-选择页面——`Program.OptionsMenu`
+当前的玩家状态由 `Program` 持有，并通过参数传给其他系统，而不是使用全局静态的 `PlayerStatistics`。
 
-架构是这样子：
+### 2. `Battle.cs`
 
-```csharp
-public static class Program
-{
-    private static bool _running = true;//游戏运行状态
-    
-    private static void Main()
-    {
-        StartMenu();
-        GameConfirmed();
-        while (_running)
-        {
-            OptionsMenu();
-        }
-    }
-```
+负责回合制战斗。
 
-***
+主要流程：
 
-### 2.`Battle.cs`
+1. 从主菜单进入战斗。
+2. `MonsterFactory.Create(player)` 根据当前玩家等级生成敌人。
+3. 玩家可以攻击、治疗或撤退。
+4. 每场战斗最多进行 3 次战斗内治疗。
+5. 击败敌人后获得经验，并由 `UpLevel` 处理升级。
+6. 战斗胜利后可以选择继续寻找下一个敌人。
 
-这是对战系统
+无效行动不会消耗回合，也不会直接结束战斗。
 
-里面有两个方法：对战确认——`StartBattle`和对战系统——`Battle`
+### 3. `LevelUp.cs`
 
-流程：
+负责经验值和升级。
 
-从`Program.OptionsMenu`（选择页面）选择**开始对战**后，会跳到`StartBattle`方法
+`GainExp` 会处理一次经验奖励可能带来的多次升级，并保留升级后溢出的经验。
 
-这时会判断你的Hp值是不是大于等于0，判断通过后从怪物工厂——`MonsterFactory.cs`导入并显示怪物信息，之后转到`Battle`方法进行一换一对战
+升级目前会提高最大 HP 和攻击力，同时恢复满 HP。
 
-对战完成后，同时获得经验（Battle部分）并自动升级你的等级，然后回到`StartBattle`方法进行询问是否继续对战
+### 4. `Heal.cs`
 
-填`y`（大小写都可以）继续，否则回到选择页面
+负责主菜单中的场外治疗。
 
-***
+治疗直接作用于传入的 `Player` 实例，并确保 HP 不会超过最大值。
 
-### 3.`LevelUp.cs`
+### 5. `ShowStatus.cs`
 
-这是升级系统，里面有获得经验（LevelUp部分）和升级方法
+负责显示玩家名称、等级、经验、HP、攻击力和治疗量。
 
-不知道怎么描述，上个图吧（
+### 6. `Player.cs` 和 `Monster.cs`
 
-![](photo/LevelUp.png)
+`Player` 表示玩家角色及其运行时状态。
 
-~~总感觉像是上了双重保险~~
+`MonsterStatistics` 表示单个敌人的基础战斗数据。
 
-***
+角色状态已经从原来的全局静态 `PlayerStatistics` 改为 `Player` 实例，后续扩展装备、技能等系统时可以继续沿着实例化对象的方向演进。
 
-### 4.`Heal.cs`
+### 7. `MonsterFactory.cs`
 
-这个是**治疗功能**，具体工作流程自己去看
+负责创建随机敌人。
 
-***
+当前包含史莱姆、哥布林和骷髅兵三种基础怪物，并有 10% 概率生成精英变体。
 
-### 5.`ShowStatus.cs`
+怪物属性会根据玩家等级进行缩放。
 
-这个是**显示玩家当前状态**的，懂得都懂，不赘述
+### 8. `SaveData.cs`
+
+负责 JSON 存档。
+
+`SaveData` 是独立的存档数据模型：
+
+- `FromPlayer` 将玩家实例转换成存档快照。
+- `ApplyTo` 将经过验证的存档数据应用回玩家实例。
+- `SaveManager` 负责文件读写和异常处理。
 
 ***
 
-### 6.`Player.cs`和`Monster.cs`
+## 当前仍可以改进什么？
 
-这两个是**玩家**和**怪物**的数值面板和基础信息，不多说
+- 增加更多具有不同战斗定位的怪物。
+- 加入装备、技能和道具系统。
+- 丰富战斗中的策略选择。
+- 重新设计治疗与资源管理。
+- 进一步完善经验和数值成长曲线。
+- 为核心逻辑补充自动化测试。
 
-***
-
-### 7.`MonsterFactory.cs`
-
-这是“怪物工厂”，是怪物的预设
-
-怪物的数值会跟玩家的等级的增长而增长
-
-该文件搭配`Battle.cs`
-
-***
-
-### 8.`SaveData.cs`
-
-这个是**存档系统**
-
-工作流程：
-
-* 预先建好`Savedata`类
-* 把数据存到json文件（存档文件）
-* 随时可以存储或读取存档
-
-存档文件一般在`console_rpg-main/bin/Debug/net10.0/save.json`
-
-***
-
-## 之后要做什么？
-
-想做其他项目就做其他项目
+这次重构先把玩家状态从全局变量中解放出来，后续功能可以在这个基础上继续扩展。
