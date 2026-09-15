@@ -8,8 +8,6 @@ namespace Console_RPG;
 /// </summary>
 public static class Battle
 {
-    private const int MaxHealsPerBattle = 3;
-
     /// <summary>进入连续战斗流程，直到玩家主动离开或战败。</summary>
     public static void StartBattle(Player player)
     {
@@ -53,12 +51,10 @@ public static class Battle
         Console.WriteLine("按任意键进入战斗。");
         Console.ReadKey(true);
 
-        int healsRemaining = MaxHealsPerBattle;
-
         while (player.Hp > 0 && monster.Hp > 0)
         {
             Console.Clear();
-            PrintBattleStatus(player, monster, healsRemaining);
+            PrintBattleStatus(player, monster);
             Console.Write("选择行动 [A]攻击 [D]治疗 [F]撤退：");
 
             char action = char.ToUpperInvariant(Console.ReadKey(true).KeyChar);
@@ -73,15 +69,15 @@ public static class Battle
                     break;
 
                 case 'D':
-                    if (healsRemaining <= 0)
+                    if (player.TreatmentCount <= 0)
                     {
-                        Console.WriteLine("本场战斗的治疗次数已经用完！");
+                        Console.WriteLine("你已经没有治疗资源了！");
                         turnConsumed = false;
                         Pause();
                         break;
                     }
 
-                    HealInBattle(player, ref healsRemaining);
+                    HealInBattle(player);
                     break;
 
                 case 'F':
@@ -127,41 +123,47 @@ public static class Battle
     }
 
     /// <summary>显示本回合开始时双方的状态。</summary>
-    private static void PrintBattleStatus(Player player, MonsterStatistics monster, int healsRemaining)
+    private static void PrintBattleStatus(Player player, MonsterStatistics monster)
     {
         Console.WriteLine("========== 战斗 ==========");
         Console.WriteLine($"{player.Name} Lv.{player.Level}");
         Console.WriteLine($"HP：{player.Hp:0.#}/{player.MaxHp:0.#}");
         Console.WriteLine($"攻击力：{player.Attack:0.#}");
+        Console.WriteLine($"治疗资源：{player.TreatmentCount}");
         Console.WriteLine("--------------------------");
         Console.WriteLine($"{monster.Name} Lv.{monster.Level}");
         Console.WriteLine($"HP：{monster.Hp:0.#}/{monster.MaxHp:0.#}");
         Console.WriteLine($"攻击力：{monster.Attack:0.#}");
-        Console.WriteLine($"本场剩余治疗：{healsRemaining}");
+        Console.WriteLine($"击败奖励：{monster.ExpReward:0.#} EXP");
         Console.WriteLine("==========================");
     }
 
+    /// <summary>执行玩家攻击。</summary>
     private static void Attack(Player player, MonsterStatistics monster)
     {
         monster.Hp -= player.Attack;
         Console.WriteLine($"你攻击了 {monster.Name}，造成 {player.Attack:0.#} 点伤害！");
     }
 
-    private static void HealInBattle(Player player, ref int healsRemaining)
+    /// <summary>消耗一次治疗资源并恢复玩家 HP。</summary>
+    private static void HealInBattle(Player player)
     {
-        double oldHp = player.Hp;
-        player.Hp = Math.Min(player.MaxHp, player.Hp + player.Treatment);
+        double recovered = player.UseTreatment();
 
-        double recovered = player.Hp - oldHp;
-        healsRemaining--;
-        Console.WriteLine($"你恢复了 {recovered:0.#} HP，还可治疗 {healsRemaining} 次。");
+        if (recovered <= 0)
+        {
+            Console.WriteLine("当前无法治疗。");
+            return;
+        }
+
+        Console.WriteLine($"你恢复了 {recovered:0.#} HP，还剩 {player.TreatmentCount} 次治疗。");
     }
 
     private static void MonsterAttack(Player player, MonsterStatistics monster)
     {
         // 等级差只提供轻微减伤，避免高等级角色完全无视敌人攻击。
         double damage = Math.Max(1, monster.Attack - player.Level * 0.5);
-        player.Hp = Math.Max(0, player.Hp - damage);
+        player.TakeDamage(damage);
 
         Console.ForegroundColor = ConsoleColor.Red;
         Console.WriteLine($"{monster.Name} 反击，造成 {damage:0.#} 点伤害！");
@@ -176,7 +178,7 @@ public static class Battle
 
         // 战败保留角色进度，但扣除少量当前经验作为失败代价。
         player.Exp *= 0.9;
-        player.Hp = player.MaxHp;
+        player.RestoreFullHealth();
         Console.WriteLine("你被带回安全地点，HP 已恢复。当前经验损失 10%。");
         Pause();
     }
