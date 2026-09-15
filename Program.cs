@@ -5,7 +5,7 @@ namespace Console_RPG;
 /// <summary>
 /// 游戏入口与主菜单。
 /// Program 持有当前玩家实例，并将它显式传给需要操作角色状态的系统。
-/// v0.4.0 开始在新游戏中初始化装备与技能，并提供装备管理入口。
+/// v0.4.0 开始在启动时检测本地档案，并在存档/读档时使用档案列表。
 /// </summary>
 public static class Program
 {
@@ -26,13 +26,59 @@ public static class Program
         }
     }
 
-    /// <summary>创建新游戏时读取玩家名称。</summary>
+    /// <summary>
+    /// 启动时检测本地档案。
+    /// 检测到档案时，先让玩家选择读取已有档案或创建新角色，避免读档前被强制要求注册名字。
+    /// </summary>
     private static void StartMenu()
     {
+        if (SaveManager.HasAnySave())
+        {
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine("===== 欢迎来到 Console RPG =====");
+                Console.WriteLine("检测到本地档案。");
+                Console.WriteLine("1. 读取已有档案");
+                Console.WriteLine("2. 创建新角色");
+                Console.WriteLine("0. 退出游戏");
+                Console.Write("请选择：");
+
+                string? choice = Console.ReadLine();
+
+                switch (choice)
+                {
+                    case "1":
+                        if (SaveManager.Load(_player))
+                        {
+                            return;
+                        }
+                        break;
+
+                    case "2":
+                        RegisterNewPlayer();
+                        return;
+
+                    case "0":
+                        _running = false;
+                        return;
+
+                    default:
+                        Console.WriteLine("输入无效，请选择 0-2。");
+                        Loading();
+                        break;
+                }
+            }
+        }
+
+        RegisterNewPlayer();
+    }
+
+    /// <summary>创建新游戏时读取玩家名称。</summary>
+    private static void RegisterNewPlayer()
+    {
         Console.Clear();
-        Console.WriteLine("===== 欢迎来到 Console RPG =====");
-        Console.WriteLine("这是一个纯控制台回合制 RPG。");
-        Console.WriteLine("================================");
+        Console.WriteLine("===== 创建新角色 =====");
         Console.Write("请输入你的名字：");
 
         while (true)
@@ -50,12 +96,17 @@ public static class Program
         }
     }
 
-    /// <summary>展示新游戏的初始状态，包括装备和技能。</summary>
+    /// <summary>展示当前角色状态，包括装备和技能。</summary>
     private static void GameConfirmed()
     {
+        if (!_running)
+        {
+            return;
+        }
+
         Console.Clear();
         Console.WriteLine("================================");
-        Console.WriteLine("角色创建完成！");
+        Console.WriteLine("角色准备完成！");
         Console.WriteLine($"名字：{_player.Name}");
         Console.WriteLine($"等级：{_player.Level}");
         Console.WriteLine($"HP：{_player.Hp:0.#}/{_player.FinalMaxHp:0.#}");
@@ -125,10 +176,10 @@ public static class Program
         }
     }
 
-    /// <summary>暂停当前界面，等待玩家返回主菜单。</summary>
+    /// <summary>暂停当前界面，等待玩家返回上一级菜单。</summary>
     public static void Loading()
     {
-        Console.WriteLine("\n按任意键返回主菜单...");
+        Console.WriteLine("\n按任意键继续...");
         Console.ReadKey(true);
     }
 }
