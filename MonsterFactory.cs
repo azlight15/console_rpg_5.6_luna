@@ -3,15 +3,15 @@ using System;
 namespace Console_RPG;
 
 /// <summary>
-/// 根据玩家等级生成随机敌人。
-/// 怪物的基础模板在这里定义，战斗系统只负责使用生成后的数据。
+/// 根据玩家角色生成随机敌人。
+/// 怪物生成只读取 Player 的必要数据，不依赖全局玩家状态。
 /// </summary>
 public static class MonsterFactory
 {
     /// <summary>创建一个新的随机怪物实例。</summary>
-    public static MonsterStatistics Create()
+    public static MonsterStatistics Create(Player player)
     {
-        int playerLevel = PlayerStatistics.Level;
+        int playerLevel = player.Level;
         int type = Random.Shared.Next(1, 4);
         bool isElite = Random.Shared.Next(100) < 10;
 
