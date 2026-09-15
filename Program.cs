@@ -2,140 +2,120 @@ using System;
 
 namespace Console_RPG;
 
-/*
-    Program 是游戏的入口类。
-    负责初始化游戏、显示菜单，并控制整个游戏主循环。
-*/
+/// <summary>
+/// 游戏入口与主菜单。
+/// Luna 版将输入校验、菜单分发和退出流程集中在这里，避免无效输入直接导致程序崩溃。
+/// </summary>
 public static class Program
 {
-    // 控制游戏是否继续运行
     private static bool _running = true;
-    
-    /*
-        游戏入口方法
-        初始化菜单并进入主循环
-    */
+
     private static void Main()
     {
-        StartMenu();     // 输入玩家名字
-        GameConfirmed(); // 显示初始状态确认
+        StartMenu();
+        GameConfirmed();
 
-        // 游戏主循环
         while (_running)
         {
             OptionsMenu();
         }
     }
-    
-    /*
-        开始菜单
-        负责获取玩家名字并做基本校验
-    */
+
+    /// <summary>创建新游戏时读取玩家名称。</summary>
     private static void StartMenu()
     {
         Console.Clear();
-        Console.WriteLine("===== 欢迎来玩Console RPG游戏 =====");
-        Console.WriteLine("此游戏是控制台游戏，没有ui");
-        Console.WriteLine("那么接下来请好好享受游戏吧！");
-        Console.WriteLine("=================================");
-        Console.Write("请输入你的名字（取了名字后不能更改！）：");
+        Console.WriteLine("===== 欢迎来到 Console RPG =====");
+        Console.WriteLine("这是一个纯控制台回合制 RPG。");
+        Console.WriteLine("================================");
+        Console.Write("请输入你的名字：");
 
-        PlayerStatistics.Name = Console.ReadLine()!;
-
-        // 防止输入空字符串或空格
-        while (string.IsNullOrWhiteSpace(PlayerStatistics.Name))
+        while (true)
         {
+            string? name = Console.ReadLine();
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                PlayerStatistics.Name = name.Trim();
+                return;
+            }
+
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.Write("\n不能只输入空格或直接回车！请重新输入你的名字：");
+            Console.Write("名字不能为空，请重新输入：");
             Console.ResetColor();
-            PlayerStatistics.Name = Console.ReadLine()!;
         }
     }
 
-    /*
-        游戏开始前的确认页面
-        展示玩家初始属性
-    */
+    /// <summary>展示新游戏的初始状态。</summary>
     private static void GameConfirmed()
     {
         Console.Clear();
-        Console.WriteLine("=================================");
-        Console.WriteLine("正式游玩之前先看一下玩家状态");
-        Console.WriteLine($"你的名字是：{PlayerStatistics.Name}");
+        Console.WriteLine("================================");
+        Console.WriteLine("角色创建完成！");
+        Console.WriteLine($"名字：{PlayerStatistics.Name}");
         Console.WriteLine($"等级：{PlayerStatistics.Level}");
         Console.WriteLine($"HP：{PlayerStatistics.Hp}/{PlayerStatistics.MaxHp}");
-        Console.WriteLine($"攻击值：{PlayerStatistics.Attack}");
-        Console.WriteLine($"那么祝你玩的开心，{PlayerStatistics.Name}勇者！");
-        Console.WriteLine("=================================");
-        Console.WriteLine("按下任意键开始游戏");
-        Console.ReadKey();
+        Console.WriteLine($"攻击力：{PlayerStatistics.Attack}");
+        Console.WriteLine("================================");
+        Console.WriteLine("按任意键开始游戏");
+        Console.ReadKey(true);
     }
 
-    /*
-        主菜单页面
-        根据玩家输入分发到不同功能模块
-    */
+    /// <summary>显示主菜单，并把玩家选择交给对应系统处理。</summary>
     private static void OptionsMenu()
     {
         Console.Clear();
         Console.WriteLine("=========================");
-        Console.WriteLine("Console RPG");
-        Console.WriteLine("请选择选项：");
-        Console.WriteLine("1.开始对战");
-        Console.WriteLine("2.升级");
-        Console.WriteLine("3.治疗");
-        Console.WriteLine("4.查看状态");
-        Console.WriteLine("5.存档");
-        Console.WriteLine("6.读档");
-        Console.WriteLine("7.退出游戏");
-        Console.WriteLine("==========================");
-        Console.Write("请选择选项：");
+        Console.WriteLine("        Console RPG");
+        Console.WriteLine("=========================");
+        Console.WriteLine("1. 开始战斗");
+        Console.WriteLine("2. 治疗");
+        Console.WriteLine("3. 查看状态");
+        Console.WriteLine("4. 存档");
+        Console.WriteLine("5. 读档");
+        Console.WriteLine("6. 退出游戏");
+        Console.WriteLine("=========================");
+        Console.Write("请选择：");
 
-        int options = Convert.ToInt32(Console.ReadLine());
-
-        switch (options)
+        while (true)
         {
-            case 1:
-                Battle.StartBattle();   // 进入战斗模块
-                break;
-            case 2:
-                UpLevel.GainExp(100);    // 测试用升级
-                break;
-            case 3:
-                Heal._Heal();              // 治疗玩家
-                break;
-            case 4:
-                ShowStatus._ShowStatus();  // 显示玩家状态
-                break;
-            case 5:
-                SaveManager.Save();     // 保存游戏
-                break;
-            case 6:
-                SaveManager.Load();     // 读取存档
-                break;
-            case 7:
-                Console.Clear();
-                Console.WriteLine("欢迎再次玩Console RPG，谢谢");
-                Console.WriteLine("那么下次再见，勇者！");
-                _running = false;       // 结束主循环
-                break;
-            default:
-                // 输入非法时重新输入
-                while (options > 7 || options < 1)
-                {
-                    Console.Write("\n输入错误，请重新输入：");
-                    options = Convert.ToInt32(Console.ReadLine());
-                }
-                break;
+            if (!int.TryParse(Console.ReadLine(), out int option) || option is < 1 or > 6)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.Write("输入无效，请输入 1-6：");
+                Console.ResetColor();
+                continue;
+            }
+
+            switch (option)
+            {
+                case 1:
+                    Battle.StartBattle();
+                    return;
+                case 2:
+                    Heal.Use();
+                    return;
+                case 3:
+                    ShowStatus.Display();
+                    return;
+                case 4:
+                    SaveManager.Save();
+                    return;
+                case 5:
+                    SaveManager.Load();
+                    return;
+                case 6:
+                    Console.Clear();
+                    Console.WriteLine("感谢游玩 Console RPG！下次再见，勇者！");
+                    _running = false;
+                    return;
+            }
         }
     }
 
-    /*
-        等待用户输入后返回主菜单
-    */
+    /// <summary>暂停当前界面，等待玩家返回主菜单。</summary>
     public static void Loading()
     {
-        Console.WriteLine("按下任意键回到选择页面");
-        Console.ReadKey();
+        Console.WriteLine("\n按任意键返回主菜单...");
+        Console.ReadKey(true);
     }
 }
