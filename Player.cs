@@ -3,7 +3,7 @@ namespace Console_RPG;
 /// <summary>
 /// 表示游戏中的玩家角色及其当前状态。
 /// 玩家数据通过实例传递给各个系统，避免依赖全局静态状态。
-/// HP 不允许被外部系统直接赋值，统一通过角色行为修改，避免出现非法状态。
+/// v0.4.0 开始支持装备和技能扩展。
 /// </summary>
 public sealed class Player
 {
@@ -11,87 +11,82 @@ public sealed class Player
     public int Level { get; set; } = 1;
     public double Exp { get; set; }
 
-    /// <summary>当前等级对应的升级经验需求。</summary>
     public double ExpToNextLevel => Level * 100;
 
     public double Hp { get; private set; } = 100;
     public double MaxHp { get; private set; } = 100;
     public double Attack { get; private set; } = 15;
 
-    /// <summary>每次治疗恢复的生命值。</summary>
-    public double Treatment { get; private set; } = 50;
+    /// <summary>当前装备的武器。</summary>
+    public Equipment? Weapon { get; private set; }
 
-    /// <summary>当前可用的治疗次数。</summary>
+    /// <summary>当前装备的防具。</summary>
+    public Equipment? Armor { get; private set; }
+
+    /// <summary>玩家已学习的技能。</summary>
+    public List<Skill> Skills { get; } = new();
+
+    /// <summary>计算装备后的最终攻击力。</summary>
+    public double FinalAttack => Attack + (Weapon?.AttackBonus ?? 0);
+
+    /// <summary>计算装备后的最终最大生命值。</summary>
+    public double FinalMaxHp => MaxHp + (Armor?.HpBonus ?? 0);
+
+    public double Treatment { get; private set; } = 50;
     public int TreatmentCount { get; private set; } = 3;
 
-    /// <summary>让玩家承受伤害，并确保 HP 不会低于 0。</summary>
     public void TakeDamage(double amount)
     {
-        if (amount <= 0)
-        {
-            return;
-        }
-
+        if (amount <= 0) return;
         Hp = System.Math.Max(0, Hp - amount);
     }
 
-    /// <summary>恢复指定数量的 HP，并确保不会超过最大生命值。</summary>
     public double Heal(double amount)
     {
-        if (amount <= 0 || Hp >= MaxHp)
-        {
-            return 0;
-        }
+        if (amount <= 0 || Hp >= FinalMaxHp) return 0;
 
         double oldHp = Hp;
-        Hp = System.Math.Min(MaxHp, Hp + amount);
+        Hp = System.Math.Min(FinalMaxHp, Hp + amount);
         return Hp - oldHp;
     }
 
-    /// <summary>消耗一次治疗资源并恢复生命值。</summary>
     public double UseTreatment()
     {
-        if (TreatmentCount <= 0 || Hp >= MaxHp)
-        {
-            return 0;
-        }
+        if (TreatmentCount <= 0 || Hp >= FinalMaxHp) return 0;
 
         double recovered = Heal(Treatment);
-        if (recovered > 0)
-        {
-            TreatmentCount--;
-        }
-
+        if (recovered > 0) TreatmentCount--;
         return recovered;
     }
 
-    /// <summary>将玩家恢复到满 HP。</summary>
-    public void RestoreFullHealth()
+    public void EquipWeapon(Equipment equipment)
     {
-        Hp = MaxHp;
+        Weapon = equipment;
     }
 
-    /// <summary>升级时提升角色的基础属性。</summary>
+    public void EquipArmor(Equipment equipment)
+    {
+        Armor = equipment;
+    }
+
+    public void LearnSkill(Skill skill)
+    {
+        if (!Skills.Contains(skill))
+        {
+            Skills.Add(skill);
+        }
+    }
+
+    public void RestoreFullHealth()
+    {
+        Hp = FinalMaxHp;
+    }
+
     public void ApplyLevelUp()
     {
         MaxHp += 20;
         Attack += 5;
         TreatmentCount++;
         RestoreFullHealth();
-    }
-
-    /// <summary>由存档系统恢复角色属性，仅供内部存档流程使用。</summary>
-    public void RestoreFromSave(double maxHp, double hp, double attack, double treatment, int treatmentCount)
-    {
-        if (maxHp <= 0 || attack <= 0 || treatment < 0 || treatmentCount < 0)
-        {
-            return;
-        }
-
-        MaxHp = maxHp;
-        Hp = System.Math.Clamp(hp, 0, maxHp);
-        Attack = attack;
-        Treatment = treatment;
-        TreatmentCount = treatmentCount;
     }
 }
