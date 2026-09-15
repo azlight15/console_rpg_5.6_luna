@@ -2,24 +2,30 @@ using System;
 
 namespace Console_RPG;
 
-public class Heal
+/// <summary>处理主菜单中的场外治疗。</summary>
+public static class Heal
 {
-    /*
-        治疗功能
-        按照 Treatment 数值恢复玩家血量
-    */
-    public static void _Heal()
+    /// <summary>
+    /// 恢复固定数值的 HP，并确保结果不会超过最大生命值。
+    /// </summary>
+    public static void Use()
     {
-        PlayerStatistics.Hp += PlayerStatistics.Treatment;
+        Console.Clear();
 
-        // 防止血量超过最大值
-        if (PlayerStatistics.Hp > PlayerStatistics.MaxHp)
+        if (PlayerStatistics.Hp >= PlayerStatistics.MaxHp)
         {
-            PlayerStatistics.Hp = PlayerStatistics.MaxHp;
+            Console.WriteLine("你的 HP 已经是满的，不需要治疗。");
+            Program.Loading();
+            return;
         }
 
-        Console.Clear();
-        Console.WriteLine($"你治疗了自己，恢复 {PlayerStatistics.Treatment} HP");
+        double oldHp = PlayerStatistics.Hp;
+        PlayerStatistics.Hp = Math.Min(
+            PlayerStatistics.MaxHp,
+            PlayerStatistics.Hp + PlayerStatistics.Treatment);
+
+        double recovered = PlayerStatistics.Hp - oldHp;
+        Console.WriteLine($"你恢复了 {recovered:0.#} HP。\n当前 HP：{PlayerStatistics.Hp:0.#}/{PlayerStatistics.MaxHp:0.#}");
 
         Program.Loading();
     }
