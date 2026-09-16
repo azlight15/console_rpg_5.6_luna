@@ -2,38 +2,33 @@ using System;
 
 namespace Console_RPG;
 
-/// <summary>
-/// 游戏入口与主菜单。
-///
-/// Program 的职责很简单：启动游戏、创建/读取玩家，以及把菜单选择交给对应系统。
-/// 它不应该自己计算伤害、升级或装备属性，否则主入口会逐渐变成“万能类”。
-/// </summary>
+// 游戏入口。
+// 这个类只负责三件事：启动游戏、显示菜单、把玩家的选择交给其他系统。
+// 战斗、装备、商店、存档等具体工作都不放在这里，避免 Program 变成什么都管的“大杂烩”。
 public static class Program
 {
     private static bool _running = true;
-    private static readonly Player _player = new();
+    private static readonly Player Player = new();
 
-    /// <summary>程序入口：初始化新角色默认内容，然后进入启动菜单和主循环。</summary>
+    // 程序从这里开始。
     private static void Main()
     {
-        // 新角色需要有最基本的装备和技能；如果随后读取旧档，这些内容会被存档状态覆盖。
-        EquipmentManager.InitializeStarterEquipment(_player);
-        SkillSystem.InitializeStarterSkills(_player);
+        // 新角色先获得默认装备和技能。
+        // 如果玩家随后读取存档，存档里的内容会覆盖这些默认数据。
+        EquipmentManager.InitializeStarterEquipment(Player);
+        SkillSystem.InitializeStarterSkills(Player);
 
         StartMenu();
         GameConfirmed();
 
-        // 主循环只负责不断显示菜单，具体功能全部交给独立系统。
+        // 游戏没有结束之前，一直显示主菜单。
         while (_running)
         {
             OptionsMenu();
         }
     }
 
-    /// <summary>
-    /// 游戏启动菜单。
-    /// 有存档时先让玩家选择读取还是创建新角色；没有存档则直接创建角色。
-    /// </summary>
+    // 启动菜单：有存档就让玩家选择读档或创建新角色，没有存档就直接创建角色。
     private static void StartMenu()
     {
         if (SaveManager.HasAnySave())
@@ -52,7 +47,7 @@ public static class Program
                 switch (choice)
                 {
                     case "1":
-                        if (SaveManager.Load(_player)) return;
+                        if (SaveManager.Load(Player)) return;
                         break;
                     case "2":
                         RegisterNewPlayer();
@@ -71,7 +66,7 @@ public static class Program
         RegisterNewPlayer();
     }
 
-    /// <summary>创建新角色，并验证玩家姓名不能是空白。</summary>
+    // 创建新角色，并且不允许玩家把名字留空。
     private static void RegisterNewPlayer()
     {
         Console.Clear();
@@ -83,7 +78,7 @@ public static class Program
             string? name = Console.ReadLine();
             if (!string.IsNullOrWhiteSpace(name))
             {
-                _player.Name = name.Trim();
+                Player.Name = name.Trim();
                 return;
             }
 
@@ -93,7 +88,7 @@ public static class Program
         }
     }
 
-    /// <summary>显示角色初始化/读档后的状态，让玩家知道当前角色是什么样子。</summary>
+    // 显示角色当前状态，让玩家确认自己加载/创建的是哪个角色。
     private static void GameConfirmed()
     {
         if (!_running) return;
@@ -101,25 +96,22 @@ public static class Program
         Console.Clear();
         Console.WriteLine("================================");
         Console.WriteLine("角色准备完成！");
-        Console.WriteLine($"名字：{_player.Name}");
-        Console.WriteLine($"等级：{_player.Level}");
-        Console.WriteLine($"HP：{_player.Hp:0.#}/{_player.FinalMaxHp:0.#}");
-        Console.WriteLine($"攻击力：{_player.FinalAttack:0.#}");
-        Console.WriteLine($"金币：{_player.Gold}");
-        Console.WriteLine($"技能点：{_player.SkillPoints}/{_player.MaxSkillPoints}");
-        Console.WriteLine($"武器：{_player.Weapon?.Name ?? "无"}");
-        Console.WriteLine($"防具：{_player.Armor?.Name ?? "无"}");
-        Console.WriteLine($"技能：{_player.Skills.Count} 个");
-        Console.WriteLine($"治疗资源：{_player.TreatmentCount}（每次恢复 {_player.Treatment:0.#} HP）");
+        Console.WriteLine($"名字：{Player.Name}");
+        Console.WriteLine($"等级：{Player.Level}");
+        Console.WriteLine($"HP：{Player.Hp:0.#}/{Player.FinalMaxHp:0.#}");
+        Console.WriteLine($"攻击力：{Player.FinalAttack:0.#}");
+        Console.WriteLine($"金币：{Player.Gold}");
+        Console.WriteLine($"技能点：{Player.SkillPoints}/{Player.MaxSkillPoints}");
+        Console.WriteLine($"武器：{Player.Weapon?.Name ?? "无"}");
+        Console.WriteLine($"防具：{Player.Armor?.Name ?? "无"}");
+        Console.WriteLine($"技能：{Player.Skills.Count} 个");
+        Console.WriteLine($"治疗资源：{Player.TreatmentCount}（每次恢复 {Player.Treatment:0.#} HP）");
         Console.WriteLine("================================");
         Console.WriteLine("按任意键开始游戏");
         Console.ReadKey(true);
     }
 
-    /// <summary>
-    /// 主菜单。
-    /// 每个选项只负责调用一个系统，然后把控制权交回主循环。
-    /// </summary>
+    // 主菜单本身不处理游戏逻辑，只负责把选择交给对应的系统。
     private static void OptionsMenu()
     {
         Console.Clear();
@@ -151,25 +143,25 @@ public static class Program
             switch (option)
             {
                 case 1:
-                    Battle.StartBattle(_player);
+                    Battle.StartBattle(Player);
                     return;
                 case 2:
-                    Heal.Use(_player);
+                    Heal.Use(Player);
                     return;
                 case 3:
-                    ShowStatus.Display(_player);
+                    ShowStatus.Display(Player);
                     return;
                 case 4:
-                    EquipmentManager.ShowMenu(_player);
+                    EquipmentManager.ShowMenu(Player);
                     return;
                 case 5:
-                    Shop.ShowMenu(_player);
+                    Shop.ShowMenu(Player);
                     return;
                 case 6:
-                    SaveManager.Save(_player);
+                    SaveManager.Save(Player);
                     return;
                 case 7:
-                    SaveManager.Load(_player);
+                    SaveManager.Load(Player);
                     return;
                 case 8:
                     SaveManager.Delete();
@@ -183,7 +175,7 @@ public static class Program
         }
     }
 
-    /// <summary>统一的菜单暂停。</summary>
+    // 所有菜单都可以调用这个方法暂停画面，避免提示一闪而过。
     public static void Loading()
     {
         Console.WriteLine("\n按任意键继续...");
