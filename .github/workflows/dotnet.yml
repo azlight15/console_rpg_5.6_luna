@@ -23,10 +23,10 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: 恢复依赖
-        run: dotnet restore Console_RPG.Tests/Console_RPG.Tests.csproj
+        run: dotnet restore Tests/Console_RPG.Tests/Console_RPG.Tests.csproj
 
       - name: 编译游戏和测试项目
-        run: dotnet build Console_RPG.Tests/Console_RPG.Tests.csproj --no-restore
+        run: dotnet build Tests/Console_RPG.Tests/Console_RPG.Tests.csproj --no-restore
 
       - name: 运行自动化测试
-        run: dotnet test Console_RPG.Tests/Console_RPG.Tests.csproj --no-build --verbosity normal
+        run: dotnet test Tests/Console_RPG.Tests/Console_RPG.Tests.csproj --no-build --verbosity normal
