@@ -2,18 +2,12 @@ using System;
 
 namespace Console_RPG;
 
-/// <summary>
-/// 装备与背包界面。
-///
-/// EquipmentManager 负责和玩家进行“装备相关的 UI 交互”，例如查看背包和选择装备。
-/// 真正的装备状态仍由 Player 保存，因此这个类不会自己维护一份“当前武器”。
-/// </summary>
+// 装备和背包界面。
+// 这里负责让玩家查看装备、查看背包，以及从背包切换当前武器和防具。
+// 真正的属性计算仍然交给 Player。
 public static class EquipmentManager
 {
-    /// <summary>
-    /// 给新角色创建基础装备。
-    /// 这些装备直接放入 Player.Inventory，并同时设置为当前装备。
-    /// </summary>
+    // 新角色出生时拿到一把木剑和一件旅行皮甲，方便直接开始游戏。
     public static void InitializeStarterEquipment(Player player)
     {
         Equipment weapon = Create("木剑", "武器", 5, 0, 0, 0, "一把普通的木剑。", "普通");
@@ -22,7 +16,7 @@ public static class EquipmentManager
         player.EquipArmor(armor);
     }
 
-    /// <summary>装备主菜单：查看背包、装备物品或返回主菜单。</summary>
+    // 装备菜单的入口。
     public static void ShowMenu(Player player)
     {
         while (true)
@@ -41,9 +35,14 @@ public static class EquipmentManager
 
             switch (Console.ReadLine())
             {
-                case "1": ShowInventory(player); break;
-                case "2": EquipItem(player); break;
-                case "3": return;
+                case "1":
+                    ShowInventory(player);
+                    break;
+                case "2":
+                    EquipItem(player);
+                    break;
+                case "3":
+                    return;
                 default:
                     Console.WriteLine("输入无效，请选择 1-3。");
                     Program.Loading();
@@ -52,12 +51,11 @@ public static class EquipmentManager
         }
     }
 
-    /// <summary>逐件展示库存，并标记当前装备。</summary>
+    // 把背包里的每件装备列出来，并标记当前正在使用的装备。
     private static void ShowInventory(Player player)
     {
         Console.Clear();
         Console.WriteLine("========== 背包 ==========");
-
         if (player.Inventory.Count == 0)
         {
             Console.WriteLine("背包为空。");
@@ -77,10 +75,7 @@ public static class EquipmentManager
         Program.Loading();
     }
 
-    /// <summary>
-    /// 从背包选择装备。
-    /// Player.EquipFromInventory 会检查索引和装备类型，因此 UI 不需要重复实现属性修改逻辑。
-    /// </summary>
+    // 根据玩家输入，从背包中选择一件装备。
     private static void EquipItem(Player player)
     {
         Console.Clear();
@@ -97,9 +92,9 @@ public static class EquipmentManager
             Equipment item = player.Inventory[i];
             Console.WriteLine($"{i + 1}. {item.Name} ({item.Type}) - {item.GetAttributeText()}");
         }
-
         Console.WriteLine("0. 返回");
         Console.Write("请选择：");
+
         if (!int.TryParse(Console.ReadLine(), out int choice) || choice < 0 || choice > player.Inventory.Count)
         {
             Console.WriteLine("输入无效。");
@@ -118,7 +113,7 @@ public static class EquipmentManager
         Program.Loading();
     }
 
-    /// <summary>创建基础装备对象，避免初始化新手装备时重复写属性对象。</summary>
+    // 创建初始装备时统一填写属性，避免到处重复写同一套初始化代码。
     private static Equipment Create(string name, string type, double attack, double hp, double critical, double evasion, string description, string rarity)
     {
         return new Equipment
