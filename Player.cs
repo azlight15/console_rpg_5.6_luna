@@ -26,7 +26,7 @@ public sealed class Player
     public double FinalAttack => Attack + (Weapon?.AttackBonus ?? 0);
     public double FinalMaxHp => MaxHp + (Armor?.HpBonus ?? 0);
     public double FinalCriticalRate => 0.10 + (Weapon?.CriticalRateBonus ?? 0) + (Armor?.CriticalRateBonus ?? 0);
-    public double FinalEvasionRate => Weapon?.EvasionRateBonus ?? 0 + (Armor?.EvasionRateBonus ?? 0);
+    public double FinalEvasionRate => (Weapon?.EvasionRateBonus ?? 0) + (Armor?.EvasionRateBonus ?? 0);
 
     public double Treatment { get; private set; } = 50;
     public int TreatmentCount { get; private set; } = 3;
