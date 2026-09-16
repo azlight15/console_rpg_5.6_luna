@@ -2,14 +2,14 @@ using System;
 
 namespace Console_RPG;
 
-/// <summary>
-/// 负责生成装备。
-/// v0.5.0 使用少量固定装备模板配合稀有度倍率，避免装备系统一开始就过度复杂。
-/// </summary>
+// 装备工厂。
+// 战斗掉落装备时，不需要自己拼装备属性，只要调用这里就能得到一件随机装备。
+// 这里目前用固定模板 + 稀有度倍率，保持系统简单，方便以后继续扩展。
 public static class EquipmentFactory
 {
     private static readonly string[] Rarities = { "普通", "稀有", "史诗" };
 
+    // 根据怪物战斗结果随机生成一件掉落装备。
     public static Equipment CreateRandomDrop(MonsterStatistics monster)
     {
         int template = Random.Shared.Next(1, 7);
@@ -21,6 +21,7 @@ public static class EquipmentFactory
             _ => 1.0
         };
 
+        // 先随机选装备模板，再根据稀有度整体提高属性。
         Equipment equipment = template switch
         {
             1 => Create("猎人短剑", "武器", 7, 0, 0.02, 0, "轻巧的短剑。"),
@@ -42,6 +43,7 @@ public static class EquipmentFactory
         return equipment;
     }
 
+    // 决定装备稀有度：普通 70%，稀有 25%，史诗 5%。
     private static string RollRarity()
     {
         int roll = Random.Shared.Next(100);
@@ -53,6 +55,8 @@ public static class EquipmentFactory
         };
     }
 
+    // 创建一件基础装备模板。
+    // 具体稀有度和属性倍率在 CreateRandomDrop() 中统一处理。
     private static Equipment Create(
         string name,
         string type,
