@@ -19,13 +19,10 @@ public sealed class Player
     /// <summary>当前累计经验。升级后只扣除升级所需经验，剩余经验继续保留。</summary>
     public double Exp { get; set; }
 
-    /// <summary>
-    /// 当前等级需要的升级经验。
-    /// v1.0 使用逐级增加的曲线，而不是每一级都固定需要 100 EXP。
-    /// </summary>
+    /// <summary>当前等级需要的升级经验，等级越高升级所需经验越多。</summary>
     public double ExpToNextLevel => 100 + (Level - 1) * 40;
 
-    /// <summary>当前生命值。只能通过 Player 提供的方法修改，避免外部随意写入非法 HP。</summary>
+    /// <summary>当前生命值。只能通过 Player 提供的方法修改。</summary>
     public double Hp { get; private set; } = 100;
 
     /// <summary>不计算装备加成的基础最大 HP。</summary>
@@ -40,7 +37,7 @@ public sealed class Player
     /// <summary>当前装备的防具。</summary>
     public Equipment? Armor { get; private set; }
 
-    /// <summary>玩家拥有的全部装备。装备和背包是两个概念：物品仍然留在背包中，只改变当前装备槽。</summary>
+    /// <summary>玩家拥有的全部装备。</summary>
     public List<Equipment> Inventory { get; } = new();
 
     /// <summary>玩家已经学会的技能。</summary>
@@ -52,10 +49,7 @@ public sealed class Player
     /// <summary>当前技能点。释放技能会消耗技能点。</summary>
     public int SkillPoints { get; private set; } = 3;
 
-    /// <summary>
-    /// 技能点上限随等级缓慢增加。
-    /// 这样升级不仅提高攻击和 HP，也会逐渐提高技能使用能力。
-    /// </summary>
+    /// <summary>技能点上限随等级缓慢增加。</summary>
     public int MaxSkillPoints => 3 + (Level - 1) / 2;
 
     /// <summary>基础治疗量。</summary>
@@ -64,16 +58,16 @@ public sealed class Player
     /// <summary>剩余治疗次数。</summary>
     public int TreatmentCount { get; private set; } = 3;
 
-    /// <summary>最终攻击力 = 基础攻击力 + 当前武器的攻击加成。</summary>
+    /// <summary>最终攻击力 = 基础攻击力 + 当前武器攻击加成。</summary>
     public double FinalAttack => Attack + (Weapon?.AttackBonus ?? 0);
 
-    /// <summary>最终最大 HP = 基础最大 HP + 当前防具的 HP 加成。</summary>
+    /// <summary>最终最大 HP = 基础最大 HP + 当前防具 HP 加成。</summary>
     public double FinalMaxHp => MaxHp + (Armor?.HpBonus ?? 0);
 
     /// <summary>最终暴击率由基础暴击率和装备加成共同决定。</summary>
     public double FinalCriticalRate => 0.10 + (Weapon?.CriticalRateBonus ?? 0) + (Armor?.CriticalRateBonus ?? 0);
 
-    /// <summary>最终闪避率主要来自装备。</summary>
+    /// <summary>最终闪避率由装备加成共同决定。</summary>
     public double FinalEvasionRate => (Weapon?.EvasionRateBonus ?? 0) + (Armor?.EvasionRateBonus ?? 0);
 
     /// <summary>承受伤害，并把 HP 限制在 0 以上。</summary>
@@ -83,14 +77,10 @@ public sealed class Player
         Hp = System.Math.Max(0, Hp - amount);
     }
 
-    /// <summary>
-    /// 恢复 HP，并把结果限制在最终最大 HP 以内。
-    /// 返回实际恢复量，让 UI 可以显示“实际恢复了多少”。
-    /// </summary>
+    /// <summary>恢复 HP，并把结果限制在最终最大 HP 以内。返回实际恢复量。</summary>
     public double Heal(double amount)
     {
         if (amount <= 0 || Hp >= FinalMaxHp) return 0;
-
         double oldHp = Hp;
         Hp = System.Math.Min(FinalMaxHp, Hp + amount);
         return Hp - oldHp;
@@ -100,19 +90,21 @@ public sealed class Player
     public double UseTreatment()
     {
         if (TreatmentCount <= 0 || Hp >= FinalMaxHp) return 0;
-
         double recovered = Heal(Treatment);
         if (recovered > 0) TreatmentCount--;
         return recovered;
     }
 
+    /// <summary>增加治疗资源。商店和其他补给系统通过这个方法修改数量。</summary>
+    public void AddTreatmentCount(int amount)
+    {
+        if (amount > 0) TreatmentCount += amount;
+    }
+
     /// <summary>获得一件装备并放入背包。</summary>
     public void AddEquipment(Equipment equipment) => Inventory.Add(equipment);
 
-    /// <summary>
-    /// 从背包选择装备。
-    /// 装备不会叠加到基础属性上，而是替换对应装备槽，因此反复装备不会产生“属性越穿越高”的 bug。
-    /// </summary>
+    /// <summary>从背包选择装备，并替换对应装备槽。</summary>
     public bool EquipFromInventory(int index)
     {
         if (index < 0 || index >= Inventory.Count) return false;
@@ -125,21 +117,21 @@ public sealed class Player
         else
             return false;
 
-        // 如果换下了高 HP 防具，当前 HP 不能超过新的最大 HP。
+        // 换下高 HP 防具后，当前 HP 不能超过新的最大 HP。
         if (Hp > FinalMaxHp)
             Hp = FinalMaxHp;
 
         return true;
     }
 
-    /// <summary>直接设置初始武器，并确保它也存在于背包中。</summary>
+    /// <summary>设置初始武器，并确保它也存在于背包中。</summary>
     public void EquipWeapon(Equipment equipment)
     {
         Weapon = equipment;
         if (!Inventory.Contains(equipment)) Inventory.Add(equipment);
     }
 
-    /// <summary>直接设置初始防具，并确保它也存在于背包中。</summary>
+    /// <summary>设置初始防具，并确保它也存在于背包中。</summary>
     public void EquipArmor(Equipment equipment)
     {
         Armor = equipment;
@@ -153,41 +145,34 @@ public sealed class Player
             Skills.Add(skill);
     }
 
-    /// <summary>
-    /// 尝试消耗技能点。
-    /// 资源扣除放在 Player 中，而不是 Battle 中，这样以后其他技能系统也能复用同一套规则。
-    /// </summary>
+    /// <summary>尝试消耗技能点。资源不足时不会扣除任何点数。</summary>
     public bool TryUseSkillPoint(int cost)
     {
         if (cost <= 0) return true;
         if (SkillPoints < cost) return false;
-
         SkillPoints -= cost;
         return true;
     }
 
-    /// <summary>战斗胜利后恢复 1 点技能点，但不会超过上限。</summary>
+    /// <summary>恢复 1 点技能点，但不会超过当前上限。</summary>
     public void RecoverSkillPoint()
     {
         SkillPoints = System.Math.Min(MaxSkillPoints, SkillPoints + 1);
     }
 
-    /// <summary>升级后将技能点补满，让升级具有即时的战斗收益。</summary>
+    /// <summary>升级后把技能点补满。</summary>
     private void RestoreSkillPoints()
     {
         SkillPoints = MaxSkillPoints;
     }
 
-    /// <summary>获得金币，统一通过方法修改，避免其他系统直接操作金币数。</summary>
+    /// <summary>获得金币。</summary>
     public void AddGold(int amount)
     {
         if (amount > 0) Gold += amount;
     }
 
-    /// <summary>
-    /// 尝试消费金币。
-    /// 商店等系统只需要关心“够不够钱”，不需要自己处理扣款逻辑。
-    /// </summary>
+    /// <summary>尝试消费金币。金币不足时不会产生负数。</summary>
     public bool TrySpendGold(int amount)
     {
         if (amount < 0 || Gold < amount) return false;
@@ -197,7 +182,7 @@ public sealed class Player
 
     /// <summary>
     /// 从存档恢复玩家状态。
-    /// 存档系统只负责读 JSON；真正把数据安全地写回 Player 的工作集中在这里。
+    /// 存档系统只负责读 JSON；真正写回 Player 的工作集中在这里。
     /// </summary>
     public void RestoreFromSave(
         double maxHp,
@@ -249,7 +234,7 @@ public sealed class Player
 
     /// <summary>
     /// 应用一次升级。
-    /// 基础属性在这里增长，其他系统不应该自己修改 MaxHp/Attack，否则升级规则会散落到多个文件。
+    /// 升级规则集中在 Player，避免 Battle、LevelUp 等文件各自修改基础属性。
     /// </summary>
     public void ApplyLevelUp()
     {
