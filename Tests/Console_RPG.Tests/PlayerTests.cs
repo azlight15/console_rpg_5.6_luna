@@ -24,8 +24,8 @@ public class PlayerTests
 
         double recovered = player.Heal(999);
 
-        Assert.Equal(110, player.Hp);
-        Assert.Equal(110, recovered + 10);
+        Assert.Equal(150, player.Hp);
+        Assert.Equal(60, recovered);
         Assert.Equal(150, player.FinalMaxHp);
     }
 
