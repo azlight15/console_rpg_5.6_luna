@@ -29,4 +29,4 @@ jobs:
         run: dotnet build Tests/Console_RPG.Tests/Console_RPG.Tests.csproj --no-restore
 
       - name: 运行自动化测试
-        run: dotnet test Tests/Console_RPG.Tests/Console_RPG.Tests.csproj --no-build --verbosity normal
+        run: dotnet test --project Tests/Console_RPG.Tests/Console_RPG.Tests.csproj --no-build --verbosity normal
