@@ -3,9 +3,8 @@ using System.Collections.Generic;
 namespace Console_RPG;
 
 /// <summary>
-/// 表示游戏中的玩家角色及其当前状态。
-/// 玩家数据通过实例传递给各个系统，避免依赖全局静态状态。
-/// v0.4.0 开始支持装备和技能扩展。
+/// 玩家运行时状态。
+/// v0.5.0 开始持有装备库存，并集中计算装备影响后的最终战斗属性。
 /// </summary>
 public sealed class Player
 {
@@ -13,82 +12,84 @@ public sealed class Player
     public int Level { get; set; } = 1;
     public double Exp { get; set; }
 
-    public double ExpToNextLevel => Level * 100;
+    public double ExpToNextLevel => 100 + (Level - 1) * 40;
 
     public double Hp { get; private set; } = 100;
     public double MaxHp { get; private set; } = 100;
     public double Attack { get; private set; } = 15;
 
-    /// <summary>当前装备的武器。</summary>
     public Equipment? Weapon { get; private set; }
-
-    /// <summary>当前装备的防具。</summary>
     public Equipment? Armor { get; private set; }
-
-    /// <summary>玩家已学习的技能列表。</summary>
+    public List<Equipment> Inventory { get; } = new();
     public List<Skill> Skills { get; } = new();
 
-    /// <summary>计算装备后的最终攻击力。</summary>
     public double FinalAttack => Attack + (Weapon?.AttackBonus ?? 0);
-
-    /// <summary>计算装备后的最终最大生命值。</summary>
     public double FinalMaxHp => MaxHp + (Armor?.HpBonus ?? 0);
+    public double FinalCriticalRate => 0.10 + (Weapon?.CriticalRateBonus ?? 0) + (Armor?.CriticalRateBonus ?? 0);
+    public double FinalEvasionRate => Weapon?.EvasionRateBonus ?? 0 + (Armor?.EvasionRateBonus ?? 0);
 
     public double Treatment { get; private set; } = 50;
     public int TreatmentCount { get; private set; } = 3;
 
-    /// <summary>减少玩家生命值，并确保生命值不会低于 0。</summary>
     public void TakeDamage(double amount)
     {
         if (amount <= 0) return;
         Hp = System.Math.Max(0, Hp - amount);
     }
 
-    /// <summary>恢复生命值，并把恢复量限制在装备后的最终生命上限以内。</summary>
     public double Heal(double amount)
     {
         if (amount <= 0 || Hp >= FinalMaxHp) return 0;
-
         double oldHp = Hp;
         Hp = System.Math.Min(FinalMaxHp, Hp + amount);
         return Hp - oldHp;
     }
 
-    /// <summary>消耗一次治疗资源，并恢复玩家生命值。</summary>
     public double UseTreatment()
     {
         if (TreatmentCount <= 0 || Hp >= FinalMaxHp) return 0;
-
         double recovered = Heal(Treatment);
         if (recovered > 0) TreatmentCount--;
         return recovered;
     }
 
-    /// <summary>装备指定武器；装备加成不会直接写入基础攻击力。</summary>
+    public void AddEquipment(Equipment equipment) => Inventory.Add(equipment);
+
+    public bool EquipFromInventory(int index)
+    {
+        if (index < 0 || index >= Inventory.Count) return false;
+        Equipment equipment = Inventory[index];
+
+        if (equipment.Type == "武器")
+            Weapon = equipment;
+        else if (equipment.Type == "防具")
+            Armor = equipment;
+        else
+            return false;
+
+        if (Hp > FinalMaxHp)
+            Hp = FinalMaxHp;
+        return true;
+    }
+
     public void EquipWeapon(Equipment equipment)
     {
         Weapon = equipment;
+        if (!Inventory.Contains(equipment)) Inventory.Add(equipment);
     }
 
-    /// <summary>装备指定防具；防具生命加成通过 FinalMaxHp 计算。</summary>
     public void EquipArmor(Equipment equipment)
     {
         Armor = equipment;
+        if (!Inventory.Contains(equipment)) Inventory.Add(equipment);
     }
 
-    /// <summary>学习技能；相同技能对象不会重复加入列表。</summary>
     public void LearnSkill(Skill skill)
     {
-        if (!Skills.Contains(skill))
-        {
+        if (!Skills.Exists(existing => existing.Name == skill.Name))
             Skills.Add(skill);
-        }
     }
 
-    /// <summary>
-    /// 从存档恢复完整玩家状态。
-    /// 装备和技能必须在恢复生命值之前设置，以便正确计算最终生命上限。
-    /// </summary>
     public void RestoreFromSave(
         double maxHp,
         double hp,
@@ -97,7 +98,8 @@ public sealed class Player
         int treatmentCount,
         Equipment? weapon,
         Equipment? armor,
-        IEnumerable<Skill>? skills)
+        IEnumerable<Skill>? skills,
+        IEnumerable<Equipment>? inventory = null)
     {
         MaxHp = maxHp;
         Attack = attack;
@@ -108,21 +110,28 @@ public sealed class Player
         Hp = System.Math.Clamp(hp, 0, FinalMaxHp);
 
         Skills.Clear();
-        if (skills is null) return;
-
-        foreach (Skill skill in skills)
+        if (skills is not null)
         {
-            LearnSkill(skill);
+            foreach (Skill skill in skills)
+                LearnSkill(skill);
         }
+
+        Inventory.Clear();
+        if (inventory is not null)
+        {
+            foreach (Equipment equipment in inventory)
+                Inventory.Add(equipment);
+        }
+
+        // 兼容 v0.4 存档：旧档没有库存时，把当前装备补进库存。
+        if (Weapon is not null && !Inventory.Exists(item => item.Name == Weapon.Name))
+            Inventory.Add(Weapon);
+        if (Armor is not null && !Inventory.Exists(item => item.Name == Armor.Name))
+            Inventory.Add(Armor);
     }
 
-    /// <summary>把当前生命值恢复到装备后的最终生命上限。</summary>
-    public void RestoreFullHealth()
-    {
-        Hp = FinalMaxHp;
-    }
+    public void RestoreFullHealth() => Hp = FinalMaxHp;
 
-    /// <summary>应用一次升级带来的基础属性成长，并重新计算最终生命值。</summary>
     public void ApplyLevelUp()
     {
         MaxHp += 20;
