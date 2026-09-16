@@ -1,32 +1,32 @@
 # ConsoleRPG
 
-一个控制台对战游戏
+一个控制台回合制 RPG。
 
 作者：AzLight15
 
+Luna 重构版本当前为 **v0.5.0**。
+
 ***
 
-### 先说未完成的地方
+## 当前玩法
 
-1.没有装备系统
-
-以上抱歉！
+- 10 种怪物。
+- 怪物等级会根据玩家等级随机变化。
+- 回合制战斗：普通攻击、技能、治疗、撤退。
+- 暴击与闪避。
+- 战斗胜利后概率获得装备。
+- 普通、稀有、史诗三档装备稀有度。
+- 装备背包与换装。
+- 多档案存档、读档和删除。
 
 ***
 
 ## 开始游戏之前先干什么？
 
-1.下载这个[.NET](https://dotnet.microsoft.com/zh-cn/download)玩意
+1. 安装 [.NET](https://dotnet.microsoft.com/zh-cn/download)。
+2. 使用 JetBrains Rider 打开项目并运行 `Console_RPG.csproj`，或使用已构建的程序运行游戏。
 
-例图：(![](photo/NET.png)
-
-然后安装它
-
-2.找到Console_RPG文件夹里依次点开`bin->Debug->net10.0`，这样就看见里面有5个文件：
-
-![](photo/exe文件.png)
-
-打开`Console_RPG.exe`就行了
+项目目标框架：`.NET 10.0`。
 
 ***
 
