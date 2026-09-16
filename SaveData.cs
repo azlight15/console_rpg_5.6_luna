@@ -6,13 +6,9 @@ using System.Text.Json;
 
 namespace Console_RPG;
 
-/// <summary>
-/// JSON 存档的数据传输模型（DTO）。
-///
-/// DTO 的作用是把 Player 的运行时状态转换成适合保存的普通数据。
-/// 这样 SaveManager 不需要直接操作 Player 的私有属性，也更容易以后修改存档格式。
-/// 新增字段都有默认值，所以旧版存档缺少金币、技能点时仍然可以读取。
-/// </summary>
+// SaveData 是“存档用的数据盒子”。
+// Player 是游戏运行时的角色，而 SaveData 只是把需要保存的东西装起来。
+// 这样以后修改 Player 的内部实现时，不需要让文件读写代码到处跟着改。
 public sealed class SaveData
 {
     public string Name { get; set; } = "";
@@ -28,13 +24,11 @@ public sealed class SaveData
     public List<Equipment> Inventory { get; set; } = new();
     public List<Skill> Skills { get; set; } = new();
 
-    /// <summary>v1.0 经济系统：玩家当前金币。</summary>
+    // v1 新增的资源也要跟着存档，否则退出游戏后金币和技能点会丢失。
     public int Gold { get; set; } = 100;
-
-    /// <summary>v1.0 技能资源：玩家当前技能点。</summary>
     public int SkillPoints { get; set; } = 3;
 
-    /// <summary>把运行时 Player 拆成可序列化的数据。</summary>
+    // 把 Player 当前状态复制成一个适合 JSON 序列化的对象。
     public static SaveData FromPlayer(Player player)
     {
         return new SaveData
@@ -56,7 +50,8 @@ public sealed class SaveData
         };
     }
 
-    /// <summary>把存档数据交给 Player，由 Player 负责真正恢复状态。</summary>
+    // 把存档内容交回 Player。
+    // 具体怎么恢复 HP、装备、技能等状态，由 Player 自己决定。
     public void ApplyTo(Player player)
     {
         player.Name = Name.Trim();
@@ -77,12 +72,9 @@ public sealed class SaveData
     }
 }
 
-/// <summary>
-/// 本地档案管理器。
-///
-/// SaveManager 只负责文件层面的事情：列出档案、确认操作、读写 JSON、处理文件错误。
-/// 它不负责战斗、升级或装备计算，这些规则仍然属于各自的游戏系统。
-/// </summary>
+// 本地存档管理器。
+// 它只负责文件：列出档案、保存、读取、删除和处理文件错误。
+// 战斗、升级、装备属性等游戏规则不应该写在这里。
 public static class SaveManager
 {
     private const string SaveDirectory = "saves";
@@ -91,9 +83,10 @@ public static class SaveManager
 
     private sealed record SaveProfile(string Name, string FilePath);
 
+    // 启动时用这个方法判断有没有可以读取的存档。
     public static bool HasAnySave() => GetProfiles().Count > 0;
 
-    /// <summary>让玩家选择一个档案覆盖，或者创建新档案。</summary>
+    // 显示档案列表，让玩家决定覆盖哪个档案或创建新档案。
     public static void Save(Player player)
     {
         List<SaveProfile> profiles = GetProfiles();
@@ -143,6 +136,7 @@ public static class SaveManager
 
         try
         {
+            // saves 文件夹不存在时自动创建。
             Directory.CreateDirectory(SaveDirectory);
             string json = JsonSerializer.Serialize(
                 SaveData.FromPlayer(player),
@@ -162,7 +156,7 @@ public static class SaveManager
         Program.Loading();
     }
 
-    /// <summary>选择一个档案读取，并用读取的数据覆盖当前角色状态。</summary>
+    // 选择一个档案读取，并用档案内容覆盖当前角色。
     public static bool Load(Player player)
     {
         List<SaveProfile> profiles = GetProfiles();
@@ -218,7 +212,7 @@ public static class SaveManager
         return false;
     }
 
-    /// <summary>列出档案并在二次确认后永久删除。</summary>
+    // 删除档案属于不可逆操作，所以一定要经过二次确认。
     public static void Delete()
     {
         List<SaveProfile> profiles = GetProfiles();
@@ -263,7 +257,7 @@ public static class SaveManager
         Program.Loading();
     }
 
-    /// <summary>扫描旧版单档 save.json 和 v0.4+ 的 saves/*.json。</summary>
+    // 同时检查旧版 save.json 和现在的 saves/*.json。
     private static List<SaveProfile> GetProfiles()
     {
         List<SaveProfile> profiles = new();
@@ -278,7 +272,8 @@ public static class SaveManager
         return profiles.OrderBy(profile => profile.Name, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
-    /// <summary>尝试读取一个档案；损坏档案直接跳过，不影响其他正常档案。</summary>
+    // 尝试把一个 JSON 文件加入档案列表。
+    // 如果文件损坏，就跳过它，不让一个坏档案拖垮整个游戏。
     private static void TryAddProfile(List<SaveProfile> profiles, string filePath)
     {
         try
@@ -290,7 +285,7 @@ public static class SaveManager
         catch (IOException) { }
     }
 
-    /// <summary>统一显示档案列表，避免存档、读档、删档各写一套相同代码。</summary>
+    // 统一显示档案编号，存档、读档和删档都使用这一套列表。
     private static void PrintProfiles(List<SaveProfile> profiles)
     {
         if (profiles.Count == 0)
@@ -303,7 +298,7 @@ public static class SaveManager
             Console.WriteLine($"{i + 1}. {profiles[i].Name}");
     }
 
-    /// <summary>危险操作统一使用 Y/N 确认。</summary>
+    // 覆盖和删除前都通过这个方法询问玩家。
     private static bool Confirm(string message)
     {
         Console.Write($"{message} (Y/N)：");
@@ -312,7 +307,7 @@ public static class SaveManager
         return choice is 'Y' or 'y';
     }
 
-    /// <summary>把档案名转换成当前操作系统允许的安全文件名。</summary>
+    // 档案名最终会变成文件名，所以要把系统不允许的字符替换掉。
     private static string GetProfilePath(string profileName)
     {
         char[] invalidChars = Path.GetInvalidFileNameChars();
@@ -321,7 +316,7 @@ public static class SaveManager
         return Path.Combine(SaveDirectory, safeName + SaveExtension);
     }
 
-    /// <summary>读取前检查核心字段，避免明显非法数据进入运行时 Player。</summary>
+    // 读取档案前先做最基本的数据检查，避免明显非法数据进入游戏。
     private static bool IsValid(SaveData? data)
     {
         if (data is null || string.IsNullOrWhiteSpace(data.Name) || data.Level < 1 || data.Exp < 0
