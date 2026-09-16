@@ -2,26 +2,22 @@ using System;
 
 namespace Console_RPG;
 
-/// <summary>
-/// 角色状态界面。
-///
-/// ShowStatus 只负责“展示”，不修改玩家数据。
-/// 这样以后调整属性计算时，只需要改 Player，状态界面自然会显示新的最终结果。
-/// </summary>
+// 角色状态界面。
+// 这个类只负责“把数据显示出来”，不负责修改玩家属性。
 public static class ShowStatus
 {
-    /// <summary>显示玩家的成长、战斗属性、装备、技能和资源。</summary>
+    // 显示玩家的成长、战斗属性、装备、技能和资源。
     public static void Display(Player player)
     {
         Console.Clear();
         Console.WriteLine("========== 角色状态 ==========");
 
-        // 先显示成长数据，方便判断当前角色距离下一次升级还有多少经验。
+        // 先看等级和经验，可以知道离下一次升级还有多远。
         Console.WriteLine($"名字：{player.Name}");
         Console.WriteLine($"等级：{player.Level}");
         Console.WriteLine($"经验：{player.Exp:0.#}/{player.ExpToNextLevel:0.#}");
 
-        // 基础属性和最终属性同时显示，可以直接看出装备到底提供了多少收益。
+        // 同时显示基础值和最终值，可以直观看出装备带来了多少提升。
         Console.WriteLine($"HP：{player.Hp:0.#}/{player.FinalMaxHp:0.#}");
         Console.WriteLine($"基础攻击力：{player.Attack:0.#}");
         Console.WriteLine($"最终攻击力：{player.FinalAttack:0.#}");
