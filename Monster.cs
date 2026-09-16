@@ -1,38 +1,34 @@
 namespace Console_RPG;
 
-/// <summary>
-/// 战斗中敌人的数据模型。
-///
-/// MonsterStatistics 只保存“这只怪物现在是什么状态”，例如等级、HP、攻击和奖励。
-/// 具体如何生成怪物由 MonsterFactory 负责，具体如何战斗由 Battle 负责。
-/// 这种职责划分可以让后续增加 Boss、特殊技能时不用把所有代码塞进一个文件。
-/// </summary>
+// 一只正在战斗中的怪物。
+// 这里只保存怪物当前的数据，例如等级、HP、攻击和奖励。
+// 怎么生成怪物由 MonsterFactory 负责，怎么打怪由 Battle 负责。
 public class MonsterStatistics
 {
-    /// <summary>战斗中显示的怪物名称。</summary>
+    // 战斗中显示的名字。
     public string Name { get; set; } = "";
 
-    /// <summary>怪物的战斗定位，例如肉盾、高速、强攻。</summary>
+    // 怪物的定位，例如肉盾、高速、强攻。
     public string Type { get; set; } = "普通";
 
-    /// <summary>本次生成出来的实际等级。</summary>
+    // 这一次实际生成出来的等级。
     public int Level { get; set; }
 
-    /// <summary>当前 HP。</summary>
+    // 当前生命值。
     public double Hp { get; set; }
 
-    /// <summary>最大 HP。</summary>
+    // 最大生命值。
     public double MaxHp { get; set; }
 
-    /// <summary>基础攻击能力。</summary>
+    // 怪物的攻击力。
     public double Attack { get; set; }
 
-    /// <summary>击败后给予的经验。</summary>
+    // 击败怪物后获得的经验。
     public double ExpReward { get; set; }
 
-    /// <summary>击败后给予的金币。</summary>
+    // 击败怪物后获得的金币。
     public int GoldReward { get; set; }
 
-    /// <summary>怪物闪避概率。</summary>
+    // 怪物闪避玩家攻击的概率。
     public double EvasionRate { get; set; }
 }
