@@ -8,9 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!-- 测试项目放在游戏项目目录下面，避免游戏项目把测试代码也编译进去。 -->
-        <Compile Remove="Console_RPG.Tests/**/*.cs" />
-        <None Remove="Console_RPG.Tests/**/*.cs" />
+        <!-- 自动化测试放在 Tests 目录；游戏项目本身不编译测试源码。 -->
+        <Compile Remove="Tests/**/*.cs" />
+        <None Remove="Tests/**/*.cs" />
     </ItemGroup>
 
 </Project>
