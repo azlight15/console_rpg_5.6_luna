@@ -3,10 +3,10 @@ using System;
 namespace Console_RPG;
 
 // 回合制战斗主流程。
-// Battle 负责“这一回合发生什么”，但具体伤害计算、技能效果、怪物生成分别交给其他类。
+// Battle 负责“这一回合发生什么”，具体伤害、技能和怪物生成交给其他类。
 public static class Battle
 {
-    // 开始连续战斗。每打赢一只怪物，玩家可以选择继续找下一只。
+    // 开始连续战斗。每打赢一只怪物，可以选择继续寻找下一只。
     public static void StartBattle(Player player)
     {
         if (player.Hp <= 0)
@@ -18,7 +18,6 @@ public static class Battle
 
         while (player.Hp > 0)
         {
-            // 每一场战斗都重新生成怪物，所以等级和种类可能不同。
             MonsterStatistics monster = MonsterFactory.Create(player);
             bool victory = Start(player, monster);
 
@@ -32,7 +31,7 @@ public static class Battle
         }
     }
 
-    // 处理一整场战斗，直到玩家或怪物倒下，或者玩家主动撤退。
+    // 处理一整场战斗，直到怪物死亡、玩家死亡或玩家主动撤退。
     private static bool Start(Player player, MonsterStatistics monster)
     {
         Console.Clear();
@@ -83,7 +82,7 @@ public static class Battle
                     Pause();
                     return false;
                 default:
-                    // 输入错误不会消耗回合，也不会让玩家莫名其妙结束战斗。
+                    // 输入错误不会消耗回合。
                     Console.WriteLine("无效操作，请选择 1-4。");
                     turnConsumed = false;
                     Pause();
@@ -92,7 +91,7 @@ public static class Battle
 
             if (!turnConsumed) continue;
 
-            // 玩家行动结束后，如果怪物已经死亡，就结算奖励，不再让怪物反击。
+            // 玩家把怪物打倒后，直接结算奖励，不让已经死亡的怪物反击。
             if (monster.Hp <= 0)
             {
                 monster.Hp = 0;
@@ -108,7 +107,7 @@ public static class Battle
                 return true;
             }
 
-            // 玩家行动后怪物还活着，怪物立即反击。
+            // 玩家行动结束后怪物还活着，所以怪物反击。
             MonsterAttack(player, monster);
             if (player.Hp <= 0)
             {
@@ -121,7 +120,7 @@ public static class Battle
         return false;
     }
 
-    // 战斗中固定显示双方最重要的信息，避免玩家需要猜自己的实际属性。
+    // 每回合显示双方的关键数据，让玩家知道自己的实际战斗能力。
     private static void PrintBattleStatus(Player player, MonsterStatistics monster)
     {
         Console.WriteLine("========== 战斗 ==========");
@@ -141,7 +140,7 @@ public static class Battle
         Console.WriteLine("==========================");
     }
 
-    // 普通攻击：先判断怪物能不能闪避，再交给 DamageCalculator 计算伤害和暴击。
+    // 普通攻击先判断怪物是否闪避，再交给 DamageCalculator 计算伤害和暴击。
     private static void Attack(Player player, MonsterStatistics monster)
     {
         if (Random.Shared.NextDouble() < monster.EvasionRate)
@@ -156,8 +155,8 @@ public static class Battle
         Console.WriteLine($"你攻击了 {monster.Name}，造成 {damage:0.#} 点伤害！");
     }
 
-    // 打开技能列表，让玩家选择一个技能。
-    // 返回 false 表示没有真正消耗回合，例如玩家选择“返回”或技能点不足。
+    // 打开技能列表，让玩家选择要释放的技能。
+    // 技能点扣除由 SkillSystem 统一处理，避免重复扣除。
     private static bool UseSkill(Player player, MonsterStatistics monster)
     {
         if (player.Skills.Count == 0)
@@ -185,27 +184,28 @@ public static class Battle
         if (index == 0) return false;
 
         Skill selectedSkill = player.Skills[index - 1];
-        if (!player.TryUseSkillPoint(selectedSkill.SkillPointCost))
+        if (Random.Shared.NextDouble() < monster.EvasionRate)
+        {
+            // 技能已经被选择并消耗本回合，但这里暂时不扣技能点。
+            // 是否闪避属于战斗结果，而技能资源由真正释放成功的 SkillSystem 处理。
+            Console.WriteLine($"{monster.Name} 闪避了你的 {selectedSkill.Name}！");
+            return true;
+        }
+
+        double damage = SkillSystem.UseSkill(player, monster, selectedSkill, out bool critical);
+        if (damage < 0)
         {
             Console.WriteLine("技能点不足！");
             Pause();
             return false;
         }
 
-        // 技能同样会受到怪物闪避影响。
-        if (Random.Shared.NextDouble() < monster.EvasionRate)
-        {
-            Console.WriteLine($"{monster.Name} 闪避了你的 {selectedSkill.Name}！");
-            return true;
-        }
-
-        double damage = SkillSystem.UseSkill(player, monster, selectedSkill, out bool critical);
         if (critical) Console.WriteLine("技能暴击！");
         Console.WriteLine($"你使用了 {selectedSkill.Name}，造成 {damage:0.#} 点伤害！");
         return true;
     }
 
-    // 战斗内治疗和主菜单治疗共用 Player 的治疗资源。
+    // 战斗内治疗和主菜单治疗共用同一套治疗资源。
     private static void HealInBattle(Player player)
     {
         double recovered = player.UseTreatment();
@@ -217,7 +217,7 @@ public static class Battle
         Console.WriteLine($"你恢复了 {recovered:0.#} HP，还剩 {player.TreatmentCount} 次治疗。");
     }
 
-    // 怪物反击。不同怪物类型可以在这里加入特殊攻击规则。
+    // 怪物反击。特殊类型的怪物可以在这里加入额外攻击效果。
     private static void MonsterAttack(Player player, MonsterStatistics monster)
     {
         double damage = monster.Attack;
@@ -227,7 +227,7 @@ public static class Battle
             Console.WriteLine("黑暗法师释放魔法！");
         }
 
-        // 玩家等级会稍微降低怪物攻击造成的实际伤害，避免等级提升后仍然完全无法承受攻击。
+        // 玩家等级会稍微降低实际受到的伤害，避免高等级玩家仍被低级怪物轻易击杀。
         damage = Math.Max(1, damage - player.Level * 0.5);
         if (Random.Shared.NextDouble() < player.FinalEvasionRate)
         {
@@ -241,8 +241,7 @@ public static class Battle
         Console.ResetColor();
     }
 
-    // 战斗胜利后尝试掉落一件装备。
-    // 普通怪物掉落率较低，精英怪掉落率较高。
+    // 战斗胜利后，按概率给玩家一件随机装备。
     private static void HandleDrop(Player player, MonsterStatistics monster)
     {
         int dropRate = monster.Name.StartsWith("[精英]") ? 70 : 35;
@@ -258,7 +257,7 @@ public static class Battle
         Console.WriteLine(equipment.GetAttributeText());
     }
 
-    // 玩家死亡时损失当前经验的 10%，但不会损失等级、装备、技能和金币。
+    // 玩家死亡时损失当前经验的 10%，但等级、装备、技能和金币都保留。
     private static void HandleDefeat(Player player)
     {
         Console.ForegroundColor = ConsoleColor.DarkRed;
@@ -270,7 +269,7 @@ public static class Battle
         Pause();
     }
 
-    // 让玩家有时间看清战斗结果。
+    // 暂停画面，让玩家有时间看清结果。
     private static void Pause()
     {
         Console.WriteLine("\n按任意键继续...");
