@@ -3,11 +3,17 @@ using System;
 namespace Console_RPG;
 
 /// <summary>
-/// v0.5.0 装备与背包界面。
-/// 玩家可以查看库存、装备已有物品，并直接看到最终属性变化。
+/// 装备与背包界面。
+///
+/// EquipmentManager 负责和玩家进行“装备相关的 UI 交互”，例如查看背包和选择装备。
+/// 真正的装备状态仍由 Player 保存，因此这个类不会自己维护一份“当前武器”。
 /// </summary>
 public static class EquipmentManager
 {
+    /// <summary>
+    /// 给新角色创建基础装备。
+    /// 这些装备直接放入 Player.Inventory，并同时设置为当前装备。
+    /// </summary>
     public static void InitializeStarterEquipment(Player player)
     {
         Equipment weapon = Create("木剑", "武器", 5, 0, 0, 0, "一把普通的木剑。", "普通");
@@ -16,6 +22,7 @@ public static class EquipmentManager
         player.EquipArmor(armor);
     }
 
+    /// <summary>装备主菜单：查看背包、装备物品或返回主菜单。</summary>
     public static void ShowMenu(Player player)
     {
         while (true)
@@ -34,14 +41,9 @@ public static class EquipmentManager
 
             switch (Console.ReadLine())
             {
-                case "1":
-                    ShowInventory(player);
-                    break;
-                case "2":
-                    EquipItem(player);
-                    break;
-                case "3":
-                    return;
+                case "1": ShowInventory(player); break;
+                case "2": EquipItem(player); break;
+                case "3": return;
                 default:
                     Console.WriteLine("输入无效，请选择 1-3。");
                     Program.Loading();
@@ -50,10 +52,12 @@ public static class EquipmentManager
         }
     }
 
+    /// <summary>逐件展示库存，并标记当前装备。</summary>
     private static void ShowInventory(Player player)
     {
         Console.Clear();
         Console.WriteLine("========== 背包 ==========");
+
         if (player.Inventory.Count == 0)
         {
             Console.WriteLine("背包为空。");
@@ -66,12 +70,17 @@ public static class EquipmentManager
                 string equipped = item == player.Weapon || item == player.Armor ? " [已装备]" : "";
                 Console.WriteLine($"{i + 1}. {item.Name} ({item.Type}){equipped}");
                 Console.WriteLine($"   {item.GetAttributeText()}");
+                Console.WriteLine($"   {item.Description}");
             }
         }
 
         Program.Loading();
     }
 
+    /// <summary>
+    /// 从背包选择装备。
+    /// Player.EquipFromInventory 会检查索引和装备类型，因此 UI 不需要重复实现属性修改逻辑。
+    /// </summary>
     private static void EquipItem(Player player)
     {
         Console.Clear();
@@ -88,9 +97,9 @@ public static class EquipmentManager
             Equipment item = player.Inventory[i];
             Console.WriteLine($"{i + 1}. {item.Name} ({item.Type}) - {item.GetAttributeText()}");
         }
+
         Console.WriteLine("0. 返回");
         Console.Write("请选择：");
-
         if (!int.TryParse(Console.ReadLine(), out int choice) || choice < 0 || choice > player.Inventory.Count)
         {
             Console.WriteLine("输入无效。");
@@ -109,6 +118,7 @@ public static class EquipmentManager
         Program.Loading();
     }
 
+    /// <summary>创建基础装备对象，避免初始化新手装备时重复写属性对象。</summary>
     private static Equipment Create(string name, string type, double attack, double hp, double critical, double evasion, string description, string rarity)
     {
         return new Equipment
