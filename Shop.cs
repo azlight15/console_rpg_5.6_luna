@@ -2,18 +2,15 @@ using System;
 
 namespace Console_RPG;
 
-/// <summary>
-/// 城镇商店。
-///
-/// v1.0 先采用固定商品，不做复杂的商店刷新、随机价格和货币类型。
-/// 目的不是把经济系统一次做满，而是先建立完整的“战斗 → 获得金币 → 消费 → 变强”循环。
-/// </summary>
+// 城镇商店。
+// v1 先做一个简单、固定的商店，让游戏形成“打怪赚金币 → 花钱变强”的循环。
+// 暂时不做商店刷新、随机价格等复杂经济系统。
 public static class Shop
 {
     private const int TreatmentPrice = 20;
     private const int SkillPointPrice = 30;
 
-    /// <summary>显示商店主菜单。</summary>
+    // 显示商店主菜单。
     public static void ShowMenu(Player player)
     {
         while (true)
@@ -44,7 +41,7 @@ public static class Shop
         }
     }
 
-    /// <summary>购买一次治疗资源。</summary>
+    // 买治疗资源。金币不足时什么都不会改变。
     private static void BuyTreatment(Player player)
     {
         if (!player.TrySpendGold(TreatmentPrice))
@@ -59,7 +56,7 @@ public static class Shop
         Program.Loading();
     }
 
-    /// <summary>购买技能点并立即恢复 1 点，不能超过技能点上限。</summary>
+    // 买技能点。已经满点时不允许浪费金币购买。
     private static void BuySkillPoint(Player player)
     {
         if (player.SkillPoints >= player.MaxSkillPoints)
@@ -81,7 +78,7 @@ public static class Shop
         Program.Loading();
     }
 
-    /// <summary>购买固定武器并放入背包，不会自动替换当前装备。</summary>
+    // 买一把固定属性的武器，只放进背包，不自动替换当前武器。
     private static void BuyWeapon(Player player)
     {
         const int price = 80;
@@ -106,7 +103,7 @@ public static class Shop
         Program.Loading();
     }
 
-    /// <summary>购买固定防具并放入背包，不会自动替换当前装备。</summary>
+    // 买一件固定属性的防具，只放进背包，不自动替换当前防具。
     private static void BuyArmor(Player player)
     {
         const int price = 100;
