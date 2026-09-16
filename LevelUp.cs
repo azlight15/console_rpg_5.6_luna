@@ -2,20 +2,11 @@ using System;
 
 namespace Console_RPG;
 
-/// <summary>
-/// 经验与升级系统。
-///
-/// 这个类只处理“经验够不够”和“升级时调用什么”。
-/// 真正的属性增长规则放在 Player.ApplyLevelUp()，避免升级规则散落在多个类里。
-/// </summary>
+// 经验和升级系统。
+// 这里负责判断玩家什么时候升级，以及把升级奖励交给 Player 应用。
 public static class UpLevel
 {
-    /// <summary>
-    /// 增加经验，并处理本次奖励可能触发的全部升级。
-    ///
-    /// 使用 while 而不是 if，是因为一次大额经验奖励可能连续升很多级。
-    /// 例如当前只差 20 EXP，但一次获得 300 EXP，就应该连续处理多次升级。
-    /// </summary>
+    // 增加经验，并处理这一次奖励可能带来的全部升级。
     public static void GainExp(Player player, double amount)
     {
         if (amount <= 0)
@@ -24,25 +15,19 @@ public static class UpLevel
         player.Exp += amount;
         Console.WriteLine($"获得经验：{amount:0.#}");
 
-        // 每次循环只升一级，并保留溢出的经验给下一级继续计算。
+        // 一次奖励可能让玩家连升好几级，所以这里不能只判断一次。
         while (player.Exp >= player.ExpToNextLevel)
         {
             LevelUp(player);
         }
     }
 
-    /// <summary>
-    /// 完成一次升级。
-    /// 这里先记录旧等级所需经验，再扣除经验并提升等级。
-    /// 这样升级所需经验来自“升级前等级”，不会因为 Level++ 导致计算错位。
-    /// </summary>
+    // 完成一次升级，并把超过升级门槛的经验保留下来。
     private static void LevelUp(Player player)
     {
         double requiredExp = player.ExpToNextLevel;
         player.Exp -= requiredExp;
         player.Level++;
-
-        // Player 统一处理 HP、攻击、治疗资源和技能点的成长。
         player.ApplyLevelUp();
 
         Console.WriteLine();
