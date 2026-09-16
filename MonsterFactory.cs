@@ -2,26 +2,22 @@ using System;
 
 namespace Console_RPG;
 
-/// <summary>
-/// 怪物工厂：负责根据玩家等级创建一只新的怪物。
-///
-/// 这里集中处理三个问题：
-/// 1. 选择怪物种类；
-/// 2. 决定本次怪物等级；
-/// 3. 根据等级缩放 HP、攻击、经验和金币。
-/// Battle 不需要知道“怪物到底怎么生成”，只拿到生成好的结果即可。
-/// </summary>
+// 怪物工厂。
+// 所有“生成什么怪物、怪物多少级、怪物有多强”的规则都集中在这里。
+// Battle 不需要知道这些细节，只需要调用 Create() 拿到一只已经准备好的怪物。
 public static class MonsterFactory
 {
+    // 根据当前玩家等级随机生成一只怪物。
     public static MonsterStatistics Create(Player player)
     {
         int playerLevel = Math.Max(1, player.Level);
 
-        // 怪物不会永远和玩家同级，而是在玩家等级附近随机浮动，避免每场战斗完全一样。
+        // 怪物等级在玩家等级上下 2 级内随机变化，所以连续战斗不会完全一样。
         int minLevel = Math.Max(1, playerLevel - 2);
         int maxLevel = playerLevel + 2;
         int level = Random.Shared.Next(minLevel, maxLevel + 1);
 
+        // 先随机选择怪物种类，再套用对应的基础属性模板。
         MonsterStatistics monster = Random.Shared.Next(1, 11) switch
         {
             1 => Create("史莱姆", "肉盾", level, 30, 5, 30, 12, 0),
@@ -37,8 +33,8 @@ public static class MonsterFactory
             _ => throw new InvalidOperationException("未知怪物类型。")
         };
 
-        // 精英怪不是另一套怪物，而是在普通怪物的基础上强化。
-        // 这样既保留普通怪物的职业定位，也能减少重复的怪物模板代码。
+        // 10% 的概率把普通怪物变成精英怪。
+        // 精英怪仍然保留原本的种类和定位，只是等级、属性和奖励更高。
         if (Random.Shared.Next(100) < 10)
         {
             monster.Name = $"[精英] {monster.Name}";
@@ -51,8 +47,8 @@ public static class MonsterFactory
             monster.EvasionRate = Math.Min(monster.EvasionRate + 0.05, 0.3);
         }
 
-        // 等级差异最终转换成属性差异。
-        // 这样 Lv.10 怪物不会只是名字变了，而是真的比 Lv.1 怪物更强、奖励更多。
+        // 等级差会转化成实际属性差。
+        // 例如同样是史莱姆，Lv.10 的史莱姆会明显强于 Lv.1 的史莱姆，奖励也更高。
         double levelScale = 1 + (monster.Level - 1) * 0.18;
         monster.MaxHp *= levelScale;
         monster.Attack *= 1 + (monster.Level - 1) * 0.12;
@@ -63,10 +59,8 @@ public static class MonsterFactory
         return monster;
     }
 
-    /// <summary>
-    /// 创建怪物的基础模板。
-    /// baseGold 与 baseExp 类似，代表击败该种怪物的大致经济价值。
-    /// </summary>
+    // 创建一只怪物的基础模板。
+    // 这里填的是“1级左右的基础数值”，真正等级成长在 Create() 里统一计算。
     private static MonsterStatistics Create(
         string name,
         string type,
