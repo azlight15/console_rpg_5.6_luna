@@ -1,41 +1,37 @@
 namespace Console_RPG;
 
-/// <summary>
-/// 一件装备的数据模型。
-///
-/// Equipment 只描述装备本身的属性，不直接修改 Player。
-/// 玩家装备它以后，Player 的 FinalAttack、FinalMaxHp 等计算属性才会把这些加成算进去。
-/// 这样装备被换下时不会留下“残余属性”。
-/// </summary>
+// 装备数据。
+// 装备只保存“自己有什么属性”，不会直接修改 Player 的基础属性。
+// Player 会根据当前装备计算最终攻击、最终生命、暴击和闪避。
 public class Equipment
 {
-    /// <summary>装备名称。</summary>
+    // 装备名称，例如“精钢剑”或“[史诗] 狼牙刃”。
     public string Name { get; set; } = "无装备";
 
-    /// <summary>装备类型，目前主要分为“武器”和“防具”。</summary>
+    // 装备类型。目前只有武器和防具两种。
     public string Type { get; set; } = "无";
 
-    /// <summary>稀有度，例如普通、稀有、史诗。</summary>
+    // 稀有度会影响装备属性。当前有普通、稀有、史诗三档。
     public string Rarity { get; set; } = "普通";
 
-    /// <summary>提供的攻击力加成。</summary>
+    // 装备提供的攻击力加成。
     public double AttackBonus { get; set; }
 
-    /// <summary>提供的最大 HP 加成。</summary>
+    // 装备提供的最大 HP 加成。
     public double HpBonus { get; set; }
 
-    /// <summary>提供的暴击率加成，使用 0-1 的小数表示。</summary>
+    // 装备提供的额外暴击率。0.05 就代表增加 5% 暴击率。
     public double CriticalRateBonus { get; set; }
 
-    /// <summary>提供的闪避率加成，使用 0-1 的小数表示。</summary>
+    // 装备提供的额外闪避率。0.05 就代表增加 5% 闪避率。
     public double EvasionRateBonus { get; set; }
 
-    /// <summary>给玩家看的装备描述。</summary>
+    // 给玩家看的文字说明。
     public string Description { get; set; } = "";
 
-    /// <summary>把装备主要属性格式化成一行文字，供背包和掉落提示复用。</summary>
+    // 把装备的主要数值整理成一行，方便背包和掉落提示直接使用。
     public string GetAttributeText()
     {
-        return $"攻击 +{AttackBonus:0.#} | HP +{HpBonus:0.#} | 暴击 +{CriticalRateBonus:P0} | 闪避 +{EvasionRateBonus:P0}";
+        return $"[{Rarity}] 攻击 +{AttackBonus:0.#} | HP +{HpBonus:0.#} | 暴击 +{CriticalRateBonus:P0} | 闪避 +{EvasionRateBonus:P0}";
     }
 }
