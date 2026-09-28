@@ -20,6 +20,16 @@ public class Skill
     // 冷却属于当前战斗状态，不会写入存档。
     public int Cooldown { get; set; }
 
+    // 技能命中后附加的状态类型；None 表示不附加状态。
+    public StatusEffectType StatusEffect { get; set; } = StatusEffectType.None;
+
+    // 状态持续的回合数。
+    public int StatusEffectDuration { get; set; }
+
+    // 中毒、燃烧等持续伤害状态每回合造成的伤害。
+    // 眩晕不使用这个数值。
+    public double StatusEffectPower { get; set; }
+
     // 使用一次技能需要消耗多少技能点。
     public int SkillPointCost { get; set; } = 1;
 }
