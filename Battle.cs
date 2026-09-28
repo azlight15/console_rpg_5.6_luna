@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Console_RPG;
 
@@ -44,6 +45,8 @@ public static class Battle
         Console.WriteLine($"金币奖励：{monster.GoldReward}");
         Console.WriteLine("按任意键进入战斗。");
         Console.ReadKey(true);
+
+        player.ResetSkillCooldowns();
 
         while (player.Hp > 0 && monster.Hp > 0)
         {
@@ -109,6 +112,7 @@ public static class Battle
 
             // 玩家行动结束后怪物还活着，所以怪物反击。
             MonsterAttack(player, monster);
+            player.TickSkillCooldowns();
             if (player.Hp <= 0)
             {
                 HandleDefeat(player);
@@ -170,7 +174,10 @@ public static class Battle
         for (int i = 0; i < player.Skills.Count; i++)
         {
             Skill skill = player.Skills[i];
-            Console.WriteLine($"{i + 1}. {skill.Name} - {skill.Description}（消耗 {skill.SkillPointCost} 点，冷却 {skill.Cooldown} 回合）");
+            string cooldownText = player.GetSkillCooldown(skill) > 0
+                ? $"剩余冷却 {player.GetSkillCooldown(skill)} 回合"
+                : "可用";
+            Console.WriteLine($"{i + 1}. {skill.Name} - {skill.Description}（消耗 {skill.SkillPointCost} 点，冷却 {skill.Cooldown} 回合，{cooldownText}）");
         }
         Console.WriteLine("0. 返回");
         Console.Write("请选择技能：");
@@ -184,6 +191,12 @@ public static class Battle
         if (index == 0) return false;
 
         Skill selectedSkill = player.Skills[index - 1];
+        if (!player.IsSkillReady(selectedSkill))
+        {
+            Console.WriteLine($"技能“{selectedSkill.Name}”还在冷却中，剩余 {player.GetSkillCooldown(selectedSkill)} 回合。");
+            Pause();
+            return false;
+        }
         if (Random.Shared.NextDouble() < monster.EvasionRate)
         {
             // 技能已经被选择并消耗本回合，但这里暂时不扣技能点。
@@ -201,6 +214,7 @@ public static class Battle
         }
 
         if (critical) Console.WriteLine("技能暴击！");
+        player.StartSkillCooldown(selectedSkill);
         Console.WriteLine($"你使用了 {selectedSkill.Name}，造成 {damage:0.#} 点伤害！");
         return true;
     }
