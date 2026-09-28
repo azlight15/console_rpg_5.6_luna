@@ -80,6 +80,69 @@ public static class Shop
         Program.Loading();
     }
 
+    // 装备强化。费用和强化规则由 Equipment / Player 负责，这里只负责菜单操作。
+    private static void EnhanceEquipment(Player player)
+    {
+        Console.Clear();
+        Console.WriteLine("========== 装备强化 ==========");
+        if (player.Inventory.Count == 0)
+        {
+            Console.WriteLine("背包为空，没有可强化的装备。");
+            Program.Loading();
+            return;
+        }
+
+        for (int i = 0; i < player.Inventory.Count; i++)
+        {
+            Equipment item = player.Inventory[i];
+            string state = item.EnhancementLevel >= Equipment.MaxEnhancementLevel
+                ? "已达 +5 上限"
+                : $"强化费用 {item.GetEnhancementCost()} 金币";
+            Console.WriteLine($"{i + 1}. {item.Name} - {item.GetAttributeText()} - {state}");
+        }
+
+        Console.WriteLine("0. 返回");
+        Console.Write("请选择要强化的装备：");
+        if (!int.TryParse(Console.ReadLine(), out int choice) || choice < 0 || choice > player.Inventory.Count)
+        {
+            Console.WriteLine("输入无效。");
+            Program.Loading();
+            return;
+        }
+        if (choice == 0) return;
+
+        Equipment selected = player.Inventory[choice - 1];
+        int cost = selected.GetEnhancementCost();
+        if (cost <= 0)
+        {
+            Console.WriteLine("这件装备已经强化到 +5。");
+            Program.Loading();
+            return;
+        }
+        if (player.Gold < cost)
+        {
+            Console.WriteLine($"金币不足，需要 {cost} 金币。");
+            Program.Loading();
+            return;
+        }
+
+        Console.Write($"确定花费 {cost} 金币强化“{selected.Name}”吗？(Y/N)：");
+        char confirm = Console.ReadKey(true).KeyChar;
+        Console.WriteLine(confirm);
+        if (confirm is not ('Y' or 'y')) return;
+
+        if (player.EnhanceEquipment(choice - 1))
+        {
+            Console.WriteLine($"强化成功！现在是 +{selected.EnhancementLevel}。");
+            Console.WriteLine(selected.GetAttributeText());
+        }
+        else
+        {
+            Console.WriteLine("强化失败。");
+        }
+        Program.Loading();
+    }
+
     // 买一把固定属性的武器，只放进背包，不自动替换当前武器。
     private static void BuyWeapon(Player player)
     {
