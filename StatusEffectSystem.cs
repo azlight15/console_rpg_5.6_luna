@@ -37,11 +37,11 @@ public static class StatusEffectSystem
             {
                 damage += Math.Max(0, effect.DamagePerTurn);
                 messages.Add($"{effect.GetDisplayName()}造成 {effect.DamagePerTurn:0.#} 点伤害。");
-            }
 
-            effect.RemainingTurns--;
-            if (effect.RemainingTurns <= 0)
-                effects.Remove(effect);
+                effect.RemainingTurns--;
+                if (effect.RemainingTurns <= 0)
+                    effects.Remove(effect);
+            }
         }
 
         return damage;
