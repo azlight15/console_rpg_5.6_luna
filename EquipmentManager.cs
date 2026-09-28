@@ -30,7 +30,8 @@ public static class EquipmentManager
             Console.WriteLine("------------------------------");
             Console.WriteLine("1. 查看背包");
             Console.WriteLine("2. 装备物品");
-            Console.WriteLine("3. 返回");
+            Console.WriteLine("3. 出售装备");
+            Console.WriteLine("4. 返回");
             Console.Write("请选择：");
 
             switch (Console.ReadLine())
@@ -44,7 +45,7 @@ public static class EquipmentManager
                 case "3":
                     return;
                 default:
-                    Console.WriteLine("输入无效，请选择 1-3。");
+                    Console.WriteLine("输入无效，请选择 1-4。");
                     Program.Loading();
                     break;
             }
@@ -110,6 +111,55 @@ public static class EquipmentManager
         else
             Console.WriteLine("该物品无法装备。");
 
+        Program.Loading();
+    }
+
+
+    // 出售装备。当前穿戴的装备不能直接卖掉，避免误操作。
+    private static void SellItem(Player player)
+    {
+        Console.Clear();
+        Console.WriteLine("========== 出售装备 ==========");
+        if (player.Inventory.Count == 0)
+        {
+            Console.WriteLine("背包为空。");
+            Program.Loading();
+            return;
+        }
+
+        for (int i = 0; i < player.Inventory.Count; i++)
+        {
+            Equipment item = player.Inventory[i];
+            string equipped = item == player.Weapon || item == player.Armor ? " [已装备]" : "";
+            Console.WriteLine($"{i + 1}. {item.Name}{equipped} - {item.GetAttributeText()} - 售价 {item.GetSellPrice()} 金币");
+        }
+
+        Console.WriteLine("0. 返回");
+        Console.Write("请选择要出售的装备：");
+        if (!int.TryParse(Console.ReadLine(), out int choice) || choice < 0 || choice > player.Inventory.Count)
+        {
+            Console.WriteLine("输入无效。");
+            Program.Loading();
+            return;
+        }
+        if (choice == 0) return;
+
+        Equipment selected = player.Inventory[choice - 1];
+        if (selected == player.Weapon || selected == player.Armor)
+        {
+            Console.WriteLine("当前装备不能直接出售，请先换下它。");
+            Program.Loading();
+            return;
+        }
+
+        int price = selected.GetSellPrice();
+        Console.Write($"确定以 {price} 金币出售“{selected.Name}”吗？(Y/N)：");
+        char confirm = Console.ReadKey(true).KeyChar;
+        Console.WriteLine(confirm);
+        if (confirm is not ('Y' or 'y')) return;
+
+        int earned = player.SellEquipment(choice - 1);
+        Console.WriteLine(earned > 0 ? $"出售成功，获得 {earned} 金币。" : "出售失败。");
         Program.Loading();
     }
 
