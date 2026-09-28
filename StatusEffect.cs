@@ -4,6 +4,7 @@ namespace Console_RPG;
 
 public enum StatusEffectType
 {
+    None,
     Poison,
     Burning,
     Stunned
