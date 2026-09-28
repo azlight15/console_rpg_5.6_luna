@@ -43,4 +43,18 @@ public class LevelUpTests
         Assert.Equal(1, player.Level);
         Assert.Equal(0, player.Exp);
     }
+
+    [Fact]
+    public void GainExp_LevelUp_ShouldRestoreSkillPointsToCurrentCap()
+    {
+        Player player = new();
+        Assert.True(player.TryUseSkillPoint(3));
+        Assert.Equal(0, player.SkillPoints);
+
+        UpLevel.GainExp(player, 100);
+
+        Assert.Equal(2, player.Level);
+        Assert.Equal(player.MaxSkillPoints, player.SkillPoints);
+    }
+
 }
