@@ -101,7 +101,9 @@ public static class Battle
 
                 UpLevel.GainExp(player, monster.ExpReward);
                 player.AddGold(monster.GoldReward);
+                player.RecoverSkillPoint();
                 Console.WriteLine($"获得金币：{monster.GoldReward}，当前金币：{player.Gold}");
+                Console.WriteLine($"战斗奖励：恢复 1 点技能点，当前技能点：{player.SkillPoints}/{player.MaxSkillPoints}");
                 HandleDrop(player, monster);
                 Pause();
                 return true;
