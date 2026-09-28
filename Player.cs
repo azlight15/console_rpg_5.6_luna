@@ -80,6 +80,29 @@ public sealed class Player
 
     public void ResetSkillCooldowns() => _skillCooldowns.Clear();
 
+    // 战斗中的临时状态效果。状态只存在于当前运行时，不会写入 SaveData。
+    public List<StatusEffect> StatusEffects { get; } = new();
+
+    // 判断玩家当前是否带有指定状态。
+    public bool HasStatus(StatusEffectType type) =>
+        StatusEffects.Exists(effect => effect.Type == type);
+
+    // 添加或刷新一个状态效果，具体规则由 StatusEffectSystem 统一处理。
+    public void ApplyStatus(StatusEffect effect) =>
+        StatusEffectSystem.Apply(StatusEffects, effect);
+
+    // 结算玩家回合开始时的持续伤害，并扣除对应状态的剩余回合。
+    public double ProcessStatusDamage(out List<string> messages)
+    {
+        double damage = StatusEffectSystem.ProcessTurnStart(StatusEffects, out messages);
+        if (damage > 0)
+            TakeDamage(damage);
+        return damage;
+    }
+
+    // 状态效果属于战斗临时数据。读取存档时会清空，避免把战斗状态带入新战斗。
+    public void ClearStatusEffects() => StatusEffectSystem.Clear(StatusEffects);
+
     /// <summary>基础治疗量。</summary>
     public double Treatment { get; private set; } = 50;
 
@@ -256,6 +279,7 @@ public sealed class Player
 
         SkillPoints = System.Math.Clamp(skillPoints, 0, MaxSkillPoints);
         ResetSkillCooldowns();
+        ClearStatusEffects();
     }
 
     /// <summary>恢复满血。</summary>
