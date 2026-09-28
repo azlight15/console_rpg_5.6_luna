@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Console_RPG;
 
 // 一只正在战斗中的怪物。
@@ -31,4 +33,28 @@ public class MonsterStatistics
 
     // 怪物闪避玩家攻击的概率。
     public double EvasionRate { get; set; }
+
+    // 战斗中的临时状态效果，例如中毒、燃烧和眩晕。
+    public List<StatusEffect> StatusEffects { get; } = new();
+
+    // 判断怪物当前是否带有指定状态。
+    public bool HasStatus(StatusEffectType type) =>
+        StatusEffects.Exists(effect => effect.Type == type);
+
+    // 添加或刷新一个状态效果。
+    public void ApplyStatus(StatusEffect effect) =>
+        StatusEffectSystem.Apply(StatusEffects, effect);
+
+    // 结算怪物回合开始时的持续伤害。
+    public double ProcessStatusDamage(out List<string> messages)
+    {
+        double damage = StatusEffectSystem.ProcessTurnStart(StatusEffects, out messages);
+        if (damage > 0)
+            Hp = System.Math.Max(0, Hp - damage);
+        return damage;
+    }
+
+    // 怪物离开战斗后不会保留临时状态。
+    public void ClearStatusEffects() => StatusEffectSystem.Clear(StatusEffects);
+
 }
