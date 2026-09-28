@@ -11,7 +11,7 @@ public static class StatusEffectSystem
     // 添加状态。如果目标已经有同类型状态，就刷新持续时间并保留较高的伤害值。
     public static void Apply(List<StatusEffect> effects, StatusEffect effect)
     {
-        if (effect.RemainingTurns <= 0)
+        if (effect.Type == StatusEffectType.None || effect.RemainingTurns <= 0)
             return;
 
         StatusEffect? existing = effects.FirstOrDefault(x => x.Type == effect.Type);
@@ -49,6 +49,18 @@ public static class StatusEffectSystem
 
     public static bool HasStun(List<StatusEffect> effects) =>
         effects.Any(x => x.Type == StatusEffectType.Stunned);
+
+    // 眩晕不是持续伤害，应该在被眩晕的一方完成一次“被跳过的回合”后移除。
+    public static void ConsumeStun(List<StatusEffect> effects)
+    {
+        StatusEffect? stun = effects.FirstOrDefault(x => x.Type == StatusEffectType.Stunned);
+        if (stun is null)
+            return;
+
+        stun.RemainingTurns--;
+        if (stun.RemainingTurns <= 0)
+            effects.Remove(stun);
+    }
 
     public static void Clear(List<StatusEffect> effects) => effects.Clear();
 }
