@@ -121,4 +121,24 @@ public class PlayerTests
         Assert.Equal(4, player.SkillPoints);
     }
 
+    [Fact]
+    public void SkillCooldown_ShouldStartAndDecreaseUntilReady()
+    {
+        Player player = new();
+        Skill skill = new() { Name = "冷却测试", Cooldown = 2 };
+
+        Assert.True(player.IsSkillReady(skill));
+
+        player.StartSkillCooldown(skill);
+        Assert.Equal(2, player.GetSkillCooldown(skill));
+        Assert.False(player.IsSkillReady(skill));
+
+        player.TickSkillCooldowns();
+        Assert.Equal(1, player.GetSkillCooldown(skill));
+
+        player.TickSkillCooldowns();
+        Assert.Equal(0, player.GetSkillCooldown(skill));
+        Assert.True(player.IsSkillReady(skill));
+    }
+
 }
