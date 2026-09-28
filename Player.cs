@@ -54,7 +54,8 @@ public sealed class Player
     public int MaxSkillPoints => 3 + (Level - 1) / 2;
 
     // 技能冷却属于当前战斗状态，不写进 SaveData。
-    // 用技能名称记录剩余回合，避免修改 Skill 数据本身。\n    private readonly Dictionary<string, int> _skillCooldowns = new();
+    // 用技能名称记录剩余回合，避免修改 Skill 数据本身。
+    private readonly Dictionary<string, int> _skillCooldowns = new();
 
     public int GetSkillCooldown(Skill skill) => _skillCooldowns.GetValueOrDefault(skill.Name);
 
