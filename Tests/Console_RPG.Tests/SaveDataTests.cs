@@ -79,4 +79,70 @@ public class SaveDataTests
         Assert.Equal("测试技能", player.Skills[0].Name);
         Assert.Equal("测试甲", player.Armor?.Name);
     }
+
+    [Fact]
+    public void FromPlayer_ShouldCopyInventoryAndSkills()
+    {
+        Player player = new();
+        Equipment weapon = new()
+        {
+            Name = "背包剑",
+            Type = "武器",
+            AttackBonus = 8
+        };
+        Skill skill = new()
+        {
+            Name = "测试技能",
+            DamageMultiplier = 1.7,
+            SkillPointCost = 1
+        };
+
+        player.AddEquipment(weapon);
+        player.LearnSkill(skill);
+
+        SaveData save = SaveData.FromPlayer(player);
+
+        Assert.Single(save.Inventory);
+        Assert.Equal("背包剑", save.Inventory[0].Name);
+        Assert.Single(save.Skills);
+        Assert.Equal("测试技能", save.Skills[0].Name);
+    }
+
+    [Fact]
+    public void ApplyTo_ShouldRestoreTreatmentCountAndSkillPoints()
+    {
+        SaveData save = new()
+        {
+            Name = "资源角色",
+            Level = 3,
+            Exp = 10,
+            MaxHp = 100,
+            Hp = 60,
+            Attack = 15,
+            Treatment = 75,
+            TreatmentCount = 7,
+            Gold = 500,
+            SkillPoints = 4
+        };
+
+        Player player = new();
+        save.ApplyTo(player);
+
+        Assert.Equal(75, player.Treatment);
+        Assert.Equal(7, player.TreatmentCount);
+        Assert.Equal(500, player.Gold);
+        Assert.Equal(4, player.SkillPoints);
+    }
+
+    [Fact]
+    public void DeserializeOldSaveWithoutV1Resources_ShouldUseDefaults()
+    {
+        SaveData? save = System.Text.Json.JsonSerializer.Deserialize<SaveData>(
+            """{"Name":"旧档","Level":1,"Exp":0,"Hp":100,"MaxHp":100,"Attack":15,"Treatment":50,"TreatmentCount":3}""");
+
+        Assert.NotNull(save);
+        Assert.Equal(100, save!.Gold);
+        Assert.Equal(3, save.SkillPoints);
+    }
+
 }
