@@ -15,7 +15,9 @@ public static class SkillSystem
             Description = "以 1.5 倍攻击力造成伤害。",
             DamageMultiplier = 1.5,
             Cooldown = 2,
-            SkillPointCost = 1
+            SkillPointCost = 1,
+            StatusEffect = StatusEffectType.Stunned,
+            StatusEffectDuration = 1
         });
 
         player.LearnSkill(new Skill
@@ -24,7 +26,10 @@ public static class SkillSystem
             Description = "以 1.8 倍攻击力造成伤害。",
             DamageMultiplier = 1.8,
             Cooldown = 3,
-            SkillPointCost = 2
+            SkillPointCost = 2,
+            StatusEffect = StatusEffectType.Burning,
+            StatusEffectDuration = 3,
+            StatusEffectPower = 5
         });
     }
 
@@ -47,6 +52,18 @@ public static class SkillSystem
             out critical);
 
         monster.Hp = System.Math.Max(0, monster.Hp - damage);
+
+        // 技能命中后再附加状态，避免技能资源不足时错误施加效果。
+        if (skill.StatusEffect != StatusEffectType.None && skill.StatusEffectDuration > 0)
+        {
+            monster.ApplyStatus(new StatusEffect
+            {
+                Type = skill.StatusEffect,
+                RemainingTurns = skill.StatusEffectDuration,
+                DamagePerTurn = skill.StatusEffectPower
+            });
+        }
+
         return damage;
     }
 }
