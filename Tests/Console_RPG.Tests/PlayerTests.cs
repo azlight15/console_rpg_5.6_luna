@@ -119,4 +119,5 @@ public class PlayerTests
 
         Assert.Equal(4, player.SkillPoints);
     }
-\n}\n
+
+}
