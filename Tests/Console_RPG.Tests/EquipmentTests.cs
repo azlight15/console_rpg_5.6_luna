@@ -61,6 +61,7 @@ public class EquipmentTests
         Assert.Equal(15, player.FinalAttack);
         Assert.Equal(100, player.FinalMaxHp);
     }
+
     [Fact]
     public void EnhanceWeapon_ShouldIncreaseAttackAndSpendGold()
     {
@@ -93,6 +94,11 @@ public class EquipmentTests
     public void Enhance_ShouldStopAtPlusFive()
     {
         Player player = new();
+        // +5 强化的总费用为 750 金币，玩家默认只有 100 金币。
+        // 这里额外补充金币，测试重点是“能连续强化到 +5，并在 +5 后停止”，
+        // 而不是测试金币不足的情况。
+        player.AddGold(650);
+
         Equipment weapon = new() { Name = "测试剑", Type = "武器", AttackBonus = 10 };
         player.AddEquipment(weapon);
 
@@ -132,5 +138,4 @@ public class EquipmentTests
         Assert.Single(player.Inventory);
         Assert.Same(weapon, player.Weapon);
     }
-
 }
