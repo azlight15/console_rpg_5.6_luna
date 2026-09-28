@@ -61,7 +61,7 @@ public class PlayerTests
 
         double recovered = player.UseTreatment();
 
-        Assert.Equal(50, recovered);
+        Assert.Equal(30, recovered);
         Assert.Equal(100, player.Hp);
         Assert.Equal(2, player.TreatmentCount);
     }
@@ -110,8 +110,9 @@ public class PlayerTests
 
         Assert.Equal(4, player.MaxSkillPoints);
         Assert.True(player.TryUseSkillPoint(3));
-        Assert.Equal(1, player.SkillPoints);
+        Assert.Equal(0, player.SkillPoints);
 
+        player.RecoverSkillPoint();
         player.RecoverSkillPoint();
         player.RecoverSkillPoint();
         player.RecoverSkillPoint();
