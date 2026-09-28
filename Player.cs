@@ -231,6 +231,37 @@ public sealed class Player
         return true;
     }
 
+    // 出售背包中的装备。正在穿戴的装备不能直接卖，防止误操作把身上的装备卖掉。
+    public int SellEquipment(int index)
+    {
+        if (index < 0 || index >= Inventory.Count) return 0;
+        Equipment equipment = Inventory[index];
+        if (equipment == Weapon || equipment == Armor) return 0;
+
+        int price = equipment.GetSellPrice();
+        Inventory.RemoveAt(index);
+        Gold += price;
+        return price;
+    }
+
+    // 强化背包中的装备。金币不足或已经 +5 时，不会改变任何数据。
+    public bool EnhanceEquipment(int index)
+    {
+        if (index < 0 || index >= Inventory.Count) return false;
+
+        Equipment equipment = Inventory[index];
+        int cost = equipment.GetEnhancementCost();
+        if (cost <= 0 || !TrySpendGold(cost)) return false;
+
+        if (!equipment.Enhance())
+        {
+            Gold += cost;
+            return false;
+        }
+
+        return true;
+    }
+
     /// <summary>
     /// 从存档恢复玩家状态。
     /// 存档系统只负责读 JSON；真正写回 Player 的工作集中在这里。
