@@ -48,6 +48,7 @@ public static class Battle
         Console.ReadKey(true);
 
         player.ResetSkillCooldowns();
+        player.ClearStatusEffects();
 
         while (player.Hp > 0 && monster.Hp > 0)
         {
