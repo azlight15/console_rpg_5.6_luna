@@ -18,7 +18,7 @@ public class MonsterFactoryTests
             // 普通怪物应该在玩家等级上下 2 级；
             // 精英怪额外提高 2 级，因此最多到玩家等级 + 4。
             int minimumLevel = Math.Max(1, player.Level - 2);
-            int maximumLevel = monster.Type.StartsWith("精英 ") ? player.Level + 4 : player.Level + 2;
+            int maximumLevel = monster.IsElite ? player.Level + 4 : player.Level + 2;
 
             Assert.InRange(monster.Level, minimumLevel, maximumLevel);
             Assert.True(monster.Hp > 0);
@@ -26,6 +26,13 @@ public class MonsterFactoryTests
             Assert.True(monster.Attack > 0);
             Assert.True(monster.ExpReward > 0);
             Assert.True(monster.GoldReward > 0);
+
+            if (monster.IsElite)
+            {
+                Assert.Equal(3, monster.SpecialAttackInterval);
+                Assert.Equal(3, monster.SpecialAttackCooldown);
+                Assert.Equal(1.6, monster.SpecialAttackMultiplier);
+            }
         }
     }
 
@@ -40,5 +47,29 @@ public class MonsterFactoryTests
 
             Assert.True(monster.Level >= 1);
         }
+    }
+
+    [Fact]
+    public void EliteSpecialAttack_ShouldWaitThreeAttacksThenBecomeAvailable()
+    {
+        MonsterStatistics monster = new()
+        {
+            IsElite = true,
+            SpecialAttackInterval = 3,
+            SpecialAttackCooldown = 3,
+            SpecialAttackMultiplier = 1.6
+        };
+
+        Assert.False(monster.TryUseSpecialAttack());
+        Assert.Equal(2, monster.SpecialAttackCooldown);
+
+        Assert.False(monster.TryUseSpecialAttack());
+        Assert.Equal(1, monster.SpecialAttackCooldown);
+
+        Assert.False(monster.TryUseSpecialAttack());
+        Assert.Equal(0, monster.SpecialAttackCooldown);
+
+        Assert.True(monster.TryUseSpecialAttack());
+        Assert.Equal(3, monster.SpecialAttackCooldown);
     }
 }

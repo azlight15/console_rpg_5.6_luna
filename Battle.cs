@@ -106,35 +106,35 @@ public static class Battle
             }
             else
             {
-            switch (action)
-            {
-                case "1":
-                    Attack(player, monster);
-                    break;
-                case "2":
-                    turnConsumed = UseSkill(player, monster);
-                    break;
-                case "3":
-                    if (player.TreatmentCount <= 0)
-                    {
-                        Console.WriteLine("你已经没有治疗资源了！");
+                switch (action)
+                {
+                    case "1":
+                        Attack(player, monster);
+                        break;
+                    case "2":
+                        turnConsumed = UseSkill(player, monster);
+                        break;
+                    case "3":
+                        if (player.TreatmentCount <= 0)
+                        {
+                            Console.WriteLine("你已经没有治疗资源了！");
+                            turnConsumed = false;
+                            Pause();
+                            break;
+                        }
+                        HealInBattle(player);
+                        break;
+                    case "4":
+                        Console.WriteLine("你撤退了。");
+                        Pause();
+                        return false;
+                    default:
+                        // 输入错误不会消耗回合。
+                        Console.WriteLine("无效操作，请选择 1-4。");
                         turnConsumed = false;
                         Pause();
                         break;
-                    }
-                    HealInBattle(player);
-                    break;
-                case "4":
-                    Console.WriteLine("你撤退了。");
-                    Pause();
-                    return false;
-                default:
-                    // 输入错误不会消耗回合。
-                    Console.WriteLine("无效操作，请选择 1-4。");
-                    turnConsumed = false;
-                    Pause();
-                    break;
-            }
+                }
             }
 
             if (!turnConsumed) continue;
@@ -288,11 +288,21 @@ public static class Battle
         Console.WriteLine($"你恢复了 {recovered:0.#} HP，还剩 {player.TreatmentCount} 次治疗。");
     }
 
-    // 怪物反击。特殊类型的怪物可以在这里加入额外攻击效果。
+    // 怪物反击。
+    // 普通怪物照旧攻击；特殊类型怪物保留原有额外伤害；精英怪则按固定节奏使用狂暴攻击。
     private static void MonsterAttack(Player player, MonsterStatistics monster)
     {
+        // 精英怪不会单纯变成“血更厚的普通怪”。
+        // 它每隔几次自己的攻击会使用一次特殊攻击，让玩家需要留意战斗节奏。
+        bool specialAttack = monster.TryUseSpecialAttack();
         double damage = monster.Attack;
-        if (monster.Type.Contains("特殊", StringComparison.Ordinal))
+
+        if (specialAttack)
+        {
+            damage *= monster.SpecialAttackMultiplier;
+            Console.WriteLine($"{monster.Name} 发动了狂暴攻击！");
+        }
+        else if (monster.Type.Contains("特殊", StringComparison.Ordinal))
         {
             damage *= 1.2;
             Console.WriteLine("黑暗法师释放魔法！");

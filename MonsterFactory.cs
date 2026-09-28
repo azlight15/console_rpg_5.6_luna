@@ -42,12 +42,19 @@ public static class MonsterFactory
         {
             monster.Name = $"[精英] {monster.Name}";
             monster.Type = "精英 " + monster.Type;
+            monster.IsElite = true;
             monster.Level += 2;
             monster.MaxHp *= 1.5;
             monster.Attack *= 1.5;
             monster.ExpReward *= 1.5;
             monster.GoldReward = (int)Math.Ceiling(monster.GoldReward * 1.5);
             monster.EvasionRate = Math.Min(monster.EvasionRate + 0.05, 0.3);
+
+            // 精英怪第一次特殊攻击不会立刻出现。
+            // 先让玩家看到几次正常攻击，再进入“精英怪开始发力”的节奏。
+            monster.SpecialAttackInterval = 3;
+            monster.SpecialAttackCooldown = 3;
+            monster.SpecialAttackMultiplier = 1.6;
         }
 
         // 等级差会转化成实际属性差。
