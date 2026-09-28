@@ -44,6 +44,7 @@ public static class SkillSystem
         double damage = DamageCalculator.CalculateSkillDamage(
             player.FinalAttack,
             skill,
+            player.FinalCriticalRate,
             out critical);
 
         monster.Hp = System.Math.Max(0, monster.Hp - damage);
