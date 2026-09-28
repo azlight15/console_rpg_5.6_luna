@@ -1,7 +1,7 @@
 namespace Console_RPG;
 
 // 技能的数据。
-// 这里负责描述技能“是什么”，例如名字、伤害倍率和消耗。
+// 这里负责描述技能“是什么”，例如名字、伤害倍率、消耗和冷却。
 // 真正释放技能的过程放在 SkillSystem，避免数据和战斗逻辑混在一起。
 public class Skill
 {
@@ -16,7 +16,8 @@ public class Skill
     public double DamageMultiplier { get; set; } = 1;
 
     // 技能冷却回合数。
-    // v1 还没有真正实现冷却，但先把数据保留下来，方便以后扩展。
+    // 战斗中释放成功后由 Player 记录剩余冷却，回合结束时逐步减少。
+    // 冷却属于当前战斗状态，不会写入存档。
     public int Cooldown { get; set; }
 
     // 使用一次技能需要消耗多少技能点。
