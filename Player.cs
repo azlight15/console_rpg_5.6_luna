@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Console_RPG;
 
@@ -51,6 +52,32 @@ public sealed class Player
 
     /// <summary>技能点上限随等级缓慢增加。</summary>
     public int MaxSkillPoints => 3 + (Level - 1) / 2;
+
+    // 技能冷却属于当前战斗状态，不写进 SaveData。
+    // 用技能名称记录剩余回合，避免修改 Skill 数据本身。\n    private readonly Dictionary<string, int> _skillCooldowns = new();
+
+    public int GetSkillCooldown(Skill skill) => _skillCooldowns.GetValueOrDefault(skill.Name);
+
+    public bool IsSkillReady(Skill skill) => GetSkillCooldown(skill) <= 0;
+
+    public void StartSkillCooldown(Skill skill)
+    {
+        if (skill.Cooldown > 0)
+            _skillCooldowns[skill.Name] = skill.Cooldown;
+    }
+
+    // 一个完整回合结束后，所有正在冷却的技能减少 1 回合。
+    public void TickSkillCooldowns()
+    {
+        foreach (string name in _skillCooldowns.Keys.ToList())
+        {
+            _skillCooldowns[name]--;
+            if (_skillCooldowns[name] <= 0)
+                _skillCooldowns.Remove(name);
+        }
+    }
+
+    public void ResetSkillCooldowns() => _skillCooldowns.Clear();
 
     /// <summary>基础治疗量。</summary>
     public double Treatment { get; private set; } = 50;
@@ -227,6 +254,7 @@ public sealed class Player
             Inventory.Add(Armor);
 
         SkillPoints = System.Math.Clamp(skillPoints, 0, MaxSkillPoints);
+        ResetSkillCooldowns();
     }
 
     /// <summary>恢复满血。</summary>
