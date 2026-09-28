@@ -23,7 +23,8 @@ public static class Shop
             Console.WriteLine($"2. 技能点药剂 +1（{SkillPointPrice} 金币）");
             Console.WriteLine("3. 猎人短剑（80 金币）");
             Console.WriteLine("4. 铁甲（100 金币）");
-            Console.WriteLine("5. 返回");
+            Console.WriteLine("5. 装备强化");
+            Console.WriteLine("6. 返回");
             Console.Write("请选择：");
 
             switch (Console.ReadLine())
@@ -32,9 +33,10 @@ public static class Shop
                 case "2": BuySkillPoint(player); break;
                 case "3": BuyWeapon(player); break;
                 case "4": BuyArmor(player); break;
-                case "5": return;
+                case "5": EnhanceEquipment(player); break;
+                case "6": return;
                 default:
-                    Console.WriteLine("输入无效，请选择 1-5。");
+                    Console.WriteLine("输入无效，请选择 1-6。");
                     Program.Loading();
                     break;
             }
