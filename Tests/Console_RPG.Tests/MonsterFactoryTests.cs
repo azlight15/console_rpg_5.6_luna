@@ -1,3 +1,4 @@
+using System;
 using Console_RPG;
 using Xunit;
 
