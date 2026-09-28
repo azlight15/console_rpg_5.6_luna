@@ -14,7 +14,7 @@ public static class SkillSystem
             Name = "重击",
             Description = "以 1.5 倍攻击力造成伤害。",
             DamageMultiplier = 1.5,
-            Cooldown = 0,
+            Cooldown = 2,
             SkillPointCost = 1
         });
 
@@ -23,7 +23,7 @@ public static class SkillSystem
             Name = "火球",
             Description = "以 1.8 倍攻击力造成伤害。",
             DamageMultiplier = 1.8,
-            Cooldown = 0,
+            Cooldown = 3,
             SkillPointCost = 2
         });
     }
