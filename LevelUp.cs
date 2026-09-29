@@ -4,7 +4,7 @@ namespace Console_RPG;
 
 // 经验和升级系统。
 // 这里负责判断玩家什么时候升级，以及把升级奖励交给 Player 应用。
-public static class UpLevel
+public static class LevelUp
 {
     // 增加经验，并处理这一次奖励可能带来的全部升级。
     public static void GainExp(Player player, double amount)
