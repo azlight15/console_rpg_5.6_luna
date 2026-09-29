@@ -80,7 +80,9 @@ public sealed class SaveData
             Skills,
             Inventory,
             Gold,
-            SkillPoints);
+            SkillPoints,
+            WeaponInventoryIndex,
+            ArmorInventoryIndex);
     }
 }
 
