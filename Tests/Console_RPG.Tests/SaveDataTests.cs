@@ -159,6 +159,37 @@ public class SaveDataTests
     }
 
     [Fact]
+    public void FromPlayerAndApplyTo_ShouldKeepCorrectSameNameEquippedEquipment()
+    {
+        Player source = new();
+        Equipment first = new()
+        {
+            Name = "同名剑",
+            Type = "武器",
+            AttackBonus = 8
+        };
+        Equipment second = new()
+        {
+            Name = "同名剑",
+            Type = "武器",
+            AttackBonus = 20
+        };
+
+        source.AddEquipment(first);
+        source.AddEquipment(second);
+        Assert.True(source.EquipFromInventory(1));
+
+        SaveData save = SaveData.FromPlayer(source);
+        Assert.Equal(1, save.WeaponInventoryIndex);
+
+        Player restored = new();
+        save.ApplyTo(restored);
+
+        Assert.Same(restored.Inventory[1], restored.Weapon);
+        Assert.Equal(20, restored.FinalAttack - restored.Attack);
+    }
+
+    [Fact]
     public void DeserializeOldSaveWithoutV1Resources_ShouldUseDefaults()
     {
         SaveData? save = System.Text.Json.JsonSerializer.Deserialize<SaveData>(
