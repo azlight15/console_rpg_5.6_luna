@@ -187,8 +187,10 @@ public static class SkillSystem
         if (!player.TryUseSkillPoint(skill.SkillPointCost))
             return -1;
 
+        // 技能和普通攻击都使用玩家当前最终暴击率，装备提供的暴击加成不会被技能忽略。
         double damage = DamageCalculator.CalculateSkillDamage(
             player.FinalAttack,
+            player.FinalCriticalRate,
             skill,
             out critical);
 
