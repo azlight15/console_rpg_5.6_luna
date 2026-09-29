@@ -1,60 +1,125 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Console_RPG;
-    // 玩家的运行时状态。
-    // 
-    // Player 是整个游戏的“角色本体”：基础属性、装备、背包、技能、金币和战斗资源都放在这里。
-    // 其他系统不要自己保存一份玩家属性，而应该通过 Player 读取或修改状态，避免数据不同步。
 
+// 玩家的运行时状态。
+// Player 是整个游戏的“角色本体”：基础属性、装备、背包、技能、金币和战斗资源都放在这里。
+// 其他系统不要自己保存一份玩家属性，而应该通过 Player 读取或修改状态，避免数据不同步。
 public sealed class Player
 {
-    // <summary>角色名称。</summary>
+    // 角色名称。
     public string Name { get; set; } = "";
-    // <summary>当前等级，从 1 级开始。</summary>
+
+    // 当前等级，从 1 级开始。
     public int Level { get; set; } = 1;
-    // <summary>当前累计经验。升级后只扣除升级所需经验，剩余经验继续保留。</summary>
+
+    // 当前累计经验。升级后只扣除升级所需经验，剩余经验继续保留。
     public double Exp { get; set; }
-    // <summary>当前等级需要的升级经验，等级越高升级所需经验越多。</summary>
+
+    // 当前等级需要的升级经验，等级越高升级所需经验越多。
     public double ExpToNextLevel => 100 + (Level - 1) * 40;
-    // <summary>当前生命值。只能通过 Player 提供的方法修改。</summary>
+
+    // 当前生命值。只能通过 Player 提供的方法修改。
     public double Hp { get; private set; } = 100;
-    // <summary>不计算装备加成的基础最大 HP。</summary>
+
+    // 不计算装备加成的基础最大 HP。
     public double MaxHp { get; private set; } = 100;
-    // <summary>不计算武器加成的基础攻击力。</summary>
+
+    // 不计算武器加成的基础攻击力。
     public double Attack { get; private set; } = 15;
-    // <summary>当前装备的武器。</summary>
+
+    // 当前装备的武器。
     public Equipment? Weapon { get; private set; }
-    // <summary>当前装备的防具。</summary>
+
+    // 当前装备的防具。
     public Equipment? Armor { get; private set; }
-    // <summary>玩家拥有的全部装备。</summary>
+
+    // 玩家拥有的全部装备。
     public List<Equipment> Inventory { get; } = new();
-    // <summary>玩家已经学会的技能。</summary>
+
+    // 玩家已经学会的技能。
     public List<Skill> Skills { get; } = new();
-    // <summary>金币，用于 v1.0 商店系统。</summary>
+
+    // 金币，用于商店和技能学习。
     public int Gold { get; private set; } = 100;
-    // <summary>当前技能点。释放技能会消耗技能点。</summary>
+
+    // 当前技能点。释放技能会消耗技能点，升级和战斗胜利可以恢复。
     public int SkillPoints { get; private set; } = 3;
-    // <summary>技能点上限随等级缓慢增加。</summary>
+
+    // 技能点上限随等级缓慢增加。
     public int MaxSkillPoints => 3 + (Level - 1) / 2;
-    // <summary>基础治疗量。</summary>
+
+    // 技能冷却属于当前战斗状态，不写进 SaveData。
+    // 用技能名称记录剩余回合，避免修改 Skill 数据本身。
+    private readonly Dictionary<string, int> _skillCooldowns = new();
+
+    public int GetSkillCooldown(Skill skill) => _skillCooldowns.GetValueOrDefault(skill.Name);
+
+    public bool IsSkillReady(Skill skill) => GetSkillCooldown(skill) <= 0;
+
+    public void StartSkillCooldown(Skill skill)
+    {
+        if (skill.Cooldown > 0)
+            _skillCooldowns[skill.Name] = skill.Cooldown;
+    }
+
+    // 一个完整回合结束后，所有正在冷却的技能减少 1 回合。
+    public void TickSkillCooldowns()
+    {
+        foreach (string name in _skillCooldowns.Keys.ToList())
+        {
+            _skillCooldowns[name]--;
+            if (_skillCooldowns[name] <= 0)
+                _skillCooldowns.Remove(name);
+        }
+    }
+
+    public void ResetSkillCooldowns() => _skillCooldowns.Clear();
+
+    // 战斗中的临时状态效果。状态只存在于当前运行时，不会写入 SaveData。
+    public List<StatusEffect> StatusEffects { get; } = new();
+
+    public bool HasStatus(StatusEffectType type) =>
+        StatusEffects.Exists(effect => effect.Type == type);
+
+    public void ApplyStatus(StatusEffect effect) =>
+        StatusEffectSystem.Apply(StatusEffects, effect);
+
+    public double ProcessStatusDamage(out List<string> messages)
+    {
+        double damage = StatusEffectSystem.ProcessTurnStart(StatusEffects, out messages);
+        if (damage > 0)
+            TakeDamage(damage);
+        return damage;
+    }
+
+    public void ClearStatusEffects() => StatusEffectSystem.Clear(StatusEffects);
+
+    // 基础治疗量。
     public double Treatment { get; private set; } = 50;
-    // <summary>剩余治疗次数。</summary>
+
+    // 剩余治疗次数。
     public int TreatmentCount { get; private set; } = 3;
-    // <summary>最终攻击力 = 基础攻击力 + 当前武器攻击加成。</summary>
+
+    // 最终攻击力 = 基础攻击力 + 当前武器攻击加成。
     public double FinalAttack => Attack + (Weapon?.AttackBonus ?? 0);
-    // <summary>最终最大 HP = 基础最大 HP + 当前防具 HP 加成。</summary>
+
+    // 最终最大 HP = 基础最大 HP + 当前防具 HP 加成。
     public double FinalMaxHp => MaxHp + (Armor?.HpBonus ?? 0);
-    // <summary>最终暴击率由基础暴击率和装备加成共同决定。</summary>
+
+    // 最终暴击率由基础暴击率和装备加成共同决定。
     public double FinalCriticalRate => 0.10 + (Weapon?.CriticalRateBonus ?? 0) + (Armor?.CriticalRateBonus ?? 0);
-    // <summary>最终闪避率由装备加成共同决定。</summary>
+
+    // 最终闪避率由装备加成共同决定。
     public double FinalEvasionRate => (Weapon?.EvasionRateBonus ?? 0) + (Armor?.EvasionRateBonus ?? 0);
-    // <summary>承受伤害，并把 HP 限制在 0 以上。</summary>
+
     public void TakeDamage(double amount)
     {
         if (amount <= 0) return;
         Hp = System.Math.Max(0, Hp - amount);
     }
-    // <summary>恢复 HP，并把结果限制在最终最大 HP 以内。返回实际恢复量。</summary>
+
     public double Heal(double amount)
     {
         if (amount <= 0 || Hp >= FinalMaxHp) return 0;
@@ -62,7 +127,7 @@ public sealed class Player
         Hp = System.Math.Min(FinalMaxHp, Hp + amount);
         return Hp - oldHp;
     }
-    // <summary>消耗一次治疗资源进行治疗。</summary>
+
     public double UseTreatment()
     {
         if (TreatmentCount <= 0 || Hp >= FinalMaxHp) return 0;
@@ -70,14 +135,14 @@ public sealed class Player
         if (recovered > 0) TreatmentCount--;
         return recovered;
     }
-    // <summary>增加治疗资源。商店和其他补给系统通过这个方法修改数量。</summary>
+
     public void AddTreatmentCount(int amount)
     {
         if (amount > 0) TreatmentCount += amount;
     }
-    // <summary>获得一件装备并放入背包。</summary>
+
     public void AddEquipment(Equipment equipment) => Inventory.Add(equipment);
-    // <summary>从背包选择装备，并替换对应装备槽。</summary>
+
     public bool EquipFromInventory(int index)
     {
         if (index < 0 || index >= Inventory.Count) return false;
@@ -90,31 +155,52 @@ public sealed class Player
         else
             return false;
 
-        // 换下高 HP 防具后，当前 HP 不能超过新的最大 HP。
         if (Hp > FinalMaxHp)
             Hp = FinalMaxHp;
 
         return true;
     }
-    // <summary>设置初始武器，并确保它也存在于背包中。</summary>
+
     public void EquipWeapon(Equipment equipment)
     {
         Weapon = equipment;
         if (!Inventory.Contains(equipment)) Inventory.Add(equipment);
     }
-    // <summary>设置初始防具，并确保它也存在于背包中。</summary>
+
     public void EquipArmor(Equipment equipment)
     {
         Armor = equipment;
         if (!Inventory.Contains(equipment)) Inventory.Add(equipment);
     }
-    // <summary>学习技能。同名技能不会重复添加。</summary>
+
+    // 直接把技能放入已学习列表。初始化和读档使用这个方法，不负责收费。
     public void LearnSkill(Skill skill)
     {
         if (!Skills.Exists(existing => existing.Name == skill.Name))
             Skills.Add(skill);
     }
-    // <summary>尝试消耗技能点。资源不足时不会扣除任何点数。</summary>
+
+    // 玩家从技能管理界面学习技能。
+    // 学习消耗金币，不消耗战斗技能点；这样“学会技能”和“释放技能”不会混成一套资源。
+    public bool TryLearnSkill(Skill skill)
+    {
+        if (skill is null || HasSkill(skill.Name))
+            return false;
+
+        if (Level < skill.LearnLevel || skill.LearnCostGold < 0)
+            return false;
+
+        if (!TrySpendGold(skill.LearnCostGold))
+            return false;
+
+        Skills.Add(skill);
+        return true;
+    }
+
+    public bool HasSkill(string skillName) =>
+        !string.IsNullOrWhiteSpace(skillName) &&
+        Skills.Exists(skill => skill.Name == skillName);
+
     public bool TryUseSkillPoint(int cost)
     {
         if (cost <= 0) return true;
@@ -122,30 +208,57 @@ public sealed class Player
         SkillPoints -= cost;
         return true;
     }
-    // <summary>恢复 1 点技能点，但不会超过当前上限。</summary>
+
     public void RecoverSkillPoint()
     {
         SkillPoints = System.Math.Min(MaxSkillPoints, SkillPoints + 1);
     }
-    // <summary>升级后把技能点补满。</summary>
+
     private void RestoreSkillPoints()
     {
         SkillPoints = MaxSkillPoints;
     }
-    // <summary>获得金币。</summary>
+
     public void AddGold(int amount)
     {
         if (amount > 0) Gold += amount;
     }
-    // <summary>尝试消费金币。金币不足时不会产生负数。</summary>
+
     public bool TrySpendGold(int amount)
     {
         if (amount < 0 || Gold < amount) return false;
         Gold -= amount;
         return true;
     }
-    // 从存档恢复玩家状态。
-    // 存档系统只负责读 JSON；真正写回 Player 的工作集中在这里。
+
+    public int SellEquipment(int index)
+    {
+        if (index < 0 || index >= Inventory.Count) return 0;
+        Equipment equipment = Inventory[index];
+        if (equipment == Weapon || equipment == Armor) return 0;
+
+        int price = equipment.GetSellPrice();
+        Inventory.RemoveAt(index);
+        Gold += price;
+        return price;
+    }
+
+    public bool EnhanceEquipment(int index)
+    {
+        if (index < 0 || index >= Inventory.Count) return false;
+
+        Equipment equipment = Inventory[index];
+        int cost = equipment.GetEnhancementCost();
+        if (cost <= 0 || !TrySpendGold(cost)) return false;
+
+        if (!equipment.Enhance())
+        {
+            Gold += cost;
+            return false;
+        }
+
+        return true;
+    }
 
     public void RestoreFromSave(
         double maxHp,
@@ -183,18 +296,32 @@ public sealed class Player
                 Inventory.Add(equipment);
         }
 
-        // 兼容旧档：v0.4 没有 Inventory 时，把当前装备补回背包。
-        if (Weapon is not null && !Inventory.Exists(item => item.Name == Weapon.Name))
-            Inventory.Add(Weapon);
-        if (Armor is not null && !Inventory.Exists(item => item.Name == Armor.Name))
-            Inventory.Add(Armor);
+        if (Weapon is not null)
+        {
+            Equipment? savedWeapon = Inventory.FirstOrDefault(item =>
+                item.Type == Weapon.Type && item.Name == Weapon.Name);
+            if (savedWeapon is not null)
+                Weapon = savedWeapon;
+            else
+                Inventory.Add(Weapon);
+        }
+
+        if (Armor is not null)
+        {
+            Equipment? savedArmor = Inventory.FirstOrDefault(item =>
+                item.Type == Armor.Type && item.Name == Armor.Name);
+            if (savedArmor is not null)
+                Armor = savedArmor;
+            else
+                Inventory.Add(Armor);
+        }
 
         SkillPoints = System.Math.Clamp(skillPoints, 0, MaxSkillPoints);
+        ResetSkillCooldowns();
+        ClearStatusEffects();
     }
-    // <summary>恢复满血。</summary>
+
     public void RestoreFullHealth() => Hp = FinalMaxHp;
-    // 应用一次升级。
-    // 升级规则集中在 Player，避免 Battle、LevelUp 等文件各自修改基础属性。
 
     public void ApplyLevelUp()
     {

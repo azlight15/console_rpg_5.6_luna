@@ -11,6 +11,7 @@ public static class Shop
     private const int SkillPointPrice = 30;
 
     // 显示商店主菜单。
+    // 所有子菜单统一使用 0 作为返回键，避免不同页面的操作规则不一致。
     public static void ShowMenu(Player player)
     {
         while (true)
@@ -23,7 +24,8 @@ public static class Shop
             Console.WriteLine($"2. 技能点药剂 +1（{SkillPointPrice} 金币）");
             Console.WriteLine("3. 猎人短剑（80 金币）");
             Console.WriteLine("4. 铁甲（100 金币）");
-            Console.WriteLine("5. 返回");
+            Console.WriteLine("5. 装备强化");
+            Console.WriteLine("0. 返回");
             Console.Write("请选择：");
 
             switch (Console.ReadLine())
@@ -32,9 +34,10 @@ public static class Shop
                 case "2": BuySkillPoint(player); break;
                 case "3": BuyWeapon(player); break;
                 case "4": BuyArmor(player); break;
-                case "5": return;
+                case "5": EnhanceEquipment(player); break;
+                case "0": return;
                 default:
-                    Console.WriteLine("输入无效，请选择 1-5。");
+                    Console.WriteLine("输入无效，请选择 0-5。");
                     Program.Loading();
                     break;
             }
@@ -75,6 +78,69 @@ public static class Shop
 
         player.RecoverSkillPoint();
         Console.WriteLine($"购买成功！当前技能点：{player.SkillPoints}/{player.MaxSkillPoints}");
+        Program.Loading();
+    }
+
+    // 装备强化。费用和强化规则由 Equipment / Player 负责，这里只负责菜单操作。
+    private static void EnhanceEquipment(Player player)
+    {
+        Console.Clear();
+        Console.WriteLine("========== 装备强化 ==========");
+        if (player.Inventory.Count == 0)
+        {
+            Console.WriteLine("背包为空，没有可强化的装备。");
+            Program.Loading();
+            return;
+        }
+
+        for (int i = 0; i < player.Inventory.Count; i++)
+        {
+            Equipment item = player.Inventory[i];
+            string state = item.EnhancementLevel >= Equipment.MaxEnhancementLevel
+                ? "已达 +5 上限"
+                : $"强化费用 {item.GetEnhancementCost()} 金币";
+            Console.WriteLine($"{i + 1}. {item.Name} - {item.GetAttributeText()} - {state}");
+        }
+
+        Console.WriteLine("0. 返回");
+        Console.Write("请选择要强化的装备：");
+        if (!int.TryParse(Console.ReadLine(), out int choice) || choice < 0 || choice > player.Inventory.Count)
+        {
+            Console.WriteLine("输入无效。");
+            Program.Loading();
+            return;
+        }
+        if (choice == 0) return;
+
+        Equipment selected = player.Inventory[choice - 1];
+        int cost = selected.GetEnhancementCost();
+        if (cost <= 0)
+        {
+            Console.WriteLine("这件装备已经强化到 +5。");
+            Program.Loading();
+            return;
+        }
+        if (player.Gold < cost)
+        {
+            Console.WriteLine($"金币不足，需要 {cost} 金币。");
+            Program.Loading();
+            return;
+        }
+
+        Console.Write($"确定花费 {cost} 金币强化“{selected.Name}”吗？(Y/N)：");
+        char confirm = Console.ReadKey(true).KeyChar;
+        Console.WriteLine(confirm);
+        if (confirm is not ('Y' or 'y')) return;
+
+        if (player.EnhanceEquipment(choice - 1))
+        {
+            Console.WriteLine($"强化成功！现在是 +{selected.EnhancementLevel}。");
+            Console.WriteLine(selected.GetAttributeText());
+        }
+        else
+        {
+            Console.WriteLine("强化失败。");
+        }
         Program.Loading();
     }
 

@@ -8,43 +8,53 @@ namespace Console_RPG;
 public static class MonsterFactory
 {
     // 根据当前玩家等级随机生成一只怪物。
-    public static MonsterStatistics Create(Player player)
+    public static MonsterStatistics Create(Player player, bool allowElite = true)
     {
         int playerLevel = Math.Max(1, player.Level);
 
-        // 怪物等级在玩家等级上下 2 级内随机变化，所以连续战斗不会完全一样。
+        // 普通怪物等级严格控制在玩家等级上下 2 级内。
+        // 精英怪会在此基础上额外提高 2 级。
         int minLevel = Math.Max(1, playerLevel - 2);
         int maxLevel = playerLevel + 2;
         int level = Random.Shared.Next(minLevel, maxLevel + 1);
 
-        // 先随机选择怪物种类，再套用对应的基础属性模板。
+        // 怪物种类只决定基础属性，不再偷偷修改等级。
+        // 等级成长统一交给下面的成长公式处理，避免“模板等级 +1/+2”
+        // 导致实际等级超过设计范围。
         MonsterStatistics monster = Random.Shared.Next(1, 11) switch
         {
             1 => Create("史莱姆", "肉盾", level, 30, 5, 30, 12, 0),
             2 => Create("哥布林", "均衡", level, 50, 8, 50, 18, 0.05),
-            3 => Create("骷髅兵", "强攻", level + 1, 60, 12, 70, 25, 0),
+            3 => Create("骷髅兵", "强攻", level, 60, 12, 70, 25, 0),
             4 => Create("野狼", "高速", level, 35, 15, 65, 22, 0.15),
-            5 => Create("巨魔", "高血量", level + 1, 120, 10, 100, 35, 0),
-            6 => Create("黑暗法师", "特殊", level + 1, 70, 18, 120, 45, 0.1),
+            5 => Create("巨魔", "高血量", level, 120, 10, 100, 35, 0),
+            6 => Create("黑暗法师", "特殊", level, 70, 18, 120, 45, 0.1),
             7 => Create("蝙蝠", "高速", level, 28, 13, 55, 20, 0.2),
             8 => Create("兽人", "强攻", level, 75, 16, 85, 30, 0.03),
-            9 => Create("冰霜巨兽", "肉盾", level + 2, 140, 14, 150, 50, 0.02),
+            9 => Create("冰霜巨兽", "肉盾", level, 140, 14, 150, 50, 0.02),
             10 => Create("毒蛇", "高速", level, 40, 17, 90, 32, 0.12),
             _ => throw new InvalidOperationException("未知怪物类型。")
         };
 
         // 10% 的概率把普通怪物变成精英怪。
         // 精英怪仍然保留原本的种类和定位，只是等级、属性和奖励更高。
-        if (Random.Shared.Next(100) < 10)
+        if (allowElite && Random.Shared.Next(100) < 10)
         {
             monster.Name = $"[精英] {monster.Name}";
             monster.Type = "精英 " + monster.Type;
+            monster.IsElite = true;
             monster.Level += 2;
             monster.MaxHp *= 1.5;
             monster.Attack *= 1.5;
             monster.ExpReward *= 1.5;
             monster.GoldReward = (int)Math.Ceiling(monster.GoldReward * 1.5);
             monster.EvasionRate = Math.Min(monster.EvasionRate + 0.05, 0.3);
+
+            // 精英怪第一次特殊攻击不会立刻出现。
+            // 先让玩家看到几次正常攻击，再进入“精英怪开始发力”的节奏。
+            monster.SpecialAttackInterval = 3;
+            monster.SpecialAttackCooldown = 3;
+            monster.SpecialAttackMultiplier = 1.6;
         }
 
         // 等级差会转化成实际属性差。

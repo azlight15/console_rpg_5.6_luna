@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Console_RPG;
 
@@ -16,9 +18,14 @@ public static class Battle
             return;
         }
 
+        bool firstBattle = true;
+
         while (player.Hp > 0)
         {
-            MonsterStatistics monster = MonsterFactory.Create(player);
+            // 第一次战斗先保证玩家能看到正常怪物和完整的新手流程。
+            // 从第二场开始才进入正常的 10% 精英怪随机机制。
+            MonsterStatistics monster = MonsterFactory.Create(player, !firstBattle);
+            firstBattle = false;
             bool victory = Start(player, monster);
 
             if (!victory || player.Hp <= 0)
@@ -45,11 +52,48 @@ public static class Battle
         Console.WriteLine("按任意键进入战斗。");
         Console.ReadKey(true);
 
+        player.ResetSkillCooldowns();
+        player.ClearStatusEffects();
+
         while (player.Hp > 0 && monster.Hp > 0)
         {
+            // 持续伤害在对应一方开始自己的回合时结算。
+            // 状态结算单独占一个区域，避免和上一回合的攻击结果挤在一起。
+            double playerStatusDamage = player.ProcessStatusDamage(out List<string> playerStatusMessages);
+            if (playerStatusMessages.Count > 0)
+            {
+                Console.WriteLine("========== 状态结算 ==========");
+                foreach (string message in playerStatusMessages)
+                    Console.WriteLine(message);
+            }
+            if (playerStatusDamage > 0)
+                Console.WriteLine($"你受到状态效果影响，剩余 HP：{player.Hp:0.#}/{player.FinalMaxHp:0.#}。");
+
+            if (player.Hp <= 0)
+            {
+                HandleDefeat(player);
+                return false;
+            }
+
+            double monsterStatusDamage = monster.ProcessStatusDamage(out List<string> monsterStatusMessages);
+            if (monsterStatusMessages.Count > 0)
+            {
+                Console.WriteLine("---------- 怪物状态 ----------");
+                foreach (string message in monsterStatusMessages)
+                    Console.WriteLine(message);
+            }
+            if (monsterStatusDamage > 0)
+                Console.WriteLine($"{monster.Name} 受到状态效果影响，剩余 HP：{monster.Hp:0.#}/{monster.MaxHp:0.#}。");
+
+            if (monster.Hp <= 0)
+            {
+                HandleVictory(player, monster);
+                return true;
+            }
+
             Console.Clear();
             PrintBattleStatus(player, monster);
-            Console.WriteLine("选择行动：");
+            Console.WriteLine("---------- 行动选择 ----------");
             Console.WriteLine("1. 普通攻击");
             Console.WriteLine("2. 使用技能");
             Console.WriteLine("3. 治疗");
@@ -59,34 +103,43 @@ public static class Battle
             string? action = Console.ReadLine();
             bool turnConsumed = true;
 
-            switch (action)
+            // 眩晕会跳过这一回合，但不会阻止下一回合继续战斗。
+            if (player.HasStatus(StatusEffectType.Stunned))
             {
-                case "1":
-                    Attack(player, monster);
-                    break;
-                case "2":
-                    turnConsumed = UseSkill(player, monster);
-                    break;
-                case "3":
-                    if (player.TreatmentCount <= 0)
-                    {
-                        Console.WriteLine("你已经没有治疗资源了！");
+                Console.WriteLine("你被眩晕了，无法行动！");
+                StatusEffectSystem.ConsumeStun(player.StatusEffects);
+            }
+            else
+            {
+                switch (action)
+                {
+                    case "1":
+                        Attack(player, monster);
+                        break;
+                    case "2":
+                        turnConsumed = UseSkill(player, monster);
+                        break;
+                    case "3":
+                        if (player.TreatmentCount <= 0)
+                        {
+                            Console.WriteLine("你已经没有治疗资源了！");
+                            turnConsumed = false;
+                            Pause();
+                            break;
+                        }
+                        HealInBattle(player);
+                        break;
+                    case "4":
+                        Console.WriteLine("你撤退了。");
+                        Pause();
+                        return false;
+                    default:
+                        // 输入错误不会消耗回合。
+                        Console.WriteLine("无效操作，请选择 1-4。");
                         turnConsumed = false;
                         Pause();
                         break;
-                    }
-                    HealInBattle(player);
-                    break;
-                case "4":
-                    Console.WriteLine("你撤退了。");
-                    Pause();
-                    return false;
-                default:
-                    // 输入错误不会消耗回合。
-                    Console.WriteLine("无效操作，请选择 1-4。");
-                    turnConsumed = false;
-                    Pause();
-                    break;
+                }
             }
 
             if (!turnConsumed) continue;
@@ -101,16 +154,25 @@ public static class Battle
 
                 UpLevel.GainExp(player, monster.ExpReward);
                 player.AddGold(monster.GoldReward);
-                player.RecoverSkillPoint();
                 Console.WriteLine($"获得金币：{monster.GoldReward}，当前金币：{player.Gold}");
-                Console.WriteLine($"战斗奖励：恢复 1 点技能点，当前技能点：{player.SkillPoints}/{player.MaxSkillPoints}");
                 HandleDrop(player, monster);
                 Pause();
                 return true;
             }
 
-            // 玩家行动结束后怪物还活着，所以怪物反击。
-            MonsterAttack(player, monster);
+            // 玩家行动结束后怪物还活着。
+            // 如果怪物被眩晕，它会跳过这次反击。
+            if (monster.HasStatus(StatusEffectType.Stunned))
+            {
+                Console.WriteLine($"{monster.Name} 被眩晕，无法反击！");
+                StatusEffectSystem.ConsumeStun(monster.StatusEffects);
+            }
+            else
+            {
+                MonsterAttack(player, monster);
+            }
+
+            player.TickSkillCooldowns();
             if (player.Hp <= 0)
             {
                 HandleDefeat(player);
@@ -120,6 +182,21 @@ public static class Battle
         }
 
         return false;
+    }
+
+    // 统一处理战斗胜利奖励，避免状态结算胜利和玩家攻击胜利出现两套重复代码。
+    private static void HandleVictory(Player player, MonsterStatistics monster)
+    {
+        monster.Hp = 0;
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine($"你击败了 {monster.Name}！");
+        Console.ResetColor();
+
+        UpLevel.GainExp(player, monster.ExpReward);
+        player.AddGold(monster.GoldReward);
+        Console.WriteLine($"获得金币：{monster.GoldReward}，当前金币：{player.Gold}");
+        HandleDrop(player, monster);
+        Pause();
     }
 
     // 每回合显示双方的关键数据，让玩家知道自己的实际战斗能力。
@@ -133,12 +210,14 @@ public static class Battle
         Console.WriteLine($"闪避率：{player.FinalEvasionRate:P0}");
         Console.WriteLine($"技能点：{player.SkillPoints}/{player.MaxSkillPoints}");
         Console.WriteLine($"治疗资源：{player.TreatmentCount}");
+        Console.WriteLine($"状态：{GetStatusText(player.StatusEffects)}");
         Console.WriteLine("--------------------------");
         Console.WriteLine($"{monster.Name} Lv.{monster.Level}");
         Console.WriteLine($"类型：{monster.Type}");
         Console.WriteLine($"HP：{monster.Hp:0.#}/{monster.MaxHp:0.#}");
         Console.WriteLine($"攻击力：{monster.Attack:0.#}");
         Console.WriteLine($"闪避率：{monster.EvasionRate:P0}");
+        Console.WriteLine($"状态：{GetStatusText(monster.StatusEffects)}");
         Console.WriteLine("==========================");
     }
 
@@ -172,7 +251,10 @@ public static class Battle
         for (int i = 0; i < player.Skills.Count; i++)
         {
             Skill skill = player.Skills[i];
-            Console.WriteLine($"{i + 1}. {skill.Name} - {skill.Description}（消耗 {skill.SkillPointCost} 点，冷却 {skill.Cooldown} 回合）");
+            string cooldownText = player.GetSkillCooldown(skill) > 0
+                ? $"剩余冷却 {player.GetSkillCooldown(skill)} 回合"
+                : "可用";
+            Console.WriteLine($"{i + 1}. {skill.Name} - {skill.Description}（消耗 {skill.SkillPointCost} 点，冷却 {skill.Cooldown} 回合，{cooldownText}）");
         }
         Console.WriteLine("0. 返回");
         Console.Write("请选择技能：");
@@ -186,6 +268,12 @@ public static class Battle
         if (index == 0) return false;
 
         Skill selectedSkill = player.Skills[index - 1];
+        if (!player.IsSkillReady(selectedSkill))
+        {
+            Console.WriteLine($"技能“{selectedSkill.Name}”还在冷却中，剩余 {player.GetSkillCooldown(selectedSkill)} 回合。");
+            Pause();
+            return false;
+        }
         if (Random.Shared.NextDouble() < monster.EvasionRate)
         {
             // 技能已经被选择并消耗本回合，但这里暂时不扣技能点。
@@ -203,6 +291,7 @@ public static class Battle
         }
 
         if (critical) Console.WriteLine("技能暴击！");
+        player.StartSkillCooldown(selectedSkill);
         Console.WriteLine($"你使用了 {selectedSkill.Name}，造成 {damage:0.#} 点伤害！");
         return true;
     }
@@ -219,11 +308,21 @@ public static class Battle
         Console.WriteLine($"你恢复了 {recovered:0.#} HP，还剩 {player.TreatmentCount} 次治疗。");
     }
 
-    // 怪物反击。特殊类型的怪物可以在这里加入额外攻击效果。
+    // 怪物反击。
+    // 普通怪物照旧攻击；特殊类型怪物保留原有额外伤害；精英怪则按固定节奏使用狂暴攻击。
     private static void MonsterAttack(Player player, MonsterStatistics monster)
     {
+        // 精英怪不会单纯变成“血更厚的普通怪”。
+        // 它每隔几次自己的攻击会使用一次特殊攻击，让玩家需要留意战斗节奏。
+        bool specialAttack = monster.TryUseSpecialAttack();
         double damage = monster.Attack;
-        if (monster.Type.Contains("特殊", StringComparison.Ordinal))
+
+        if (specialAttack)
+        {
+            damage *= monster.SpecialAttackMultiplier;
+            Console.WriteLine($"{monster.Name} 发动了狂暴攻击！");
+        }
+        else if (monster.Type.Contains("特殊", StringComparison.Ordinal))
         {
             damage *= 1.2;
             Console.WriteLine("黑暗法师释放魔法！");
@@ -238,9 +337,44 @@ public static class Battle
         }
 
         player.TakeDamage(damage);
+
+        // 毒蛇和黑暗法师会偶尔附加状态，让怪物也拥有主动施加状态的能力。
+        if (monster.Name.Contains("毒蛇", StringComparison.Ordinal) && Random.Shared.Next(100) < 30)
+        {
+            player.ApplyStatus(new StatusEffect
+            {
+                Type = StatusEffectType.Poison,
+                RemainingTurns = 3,
+                DamagePerTurn = 4
+            });
+            Console.WriteLine("你中了毒！");
+        }
+        else if (monster.Name.Contains("黑暗法师", StringComparison.Ordinal) && Random.Shared.Next(100) < 25)
+        {
+            player.ApplyStatus(new StatusEffect
+            {
+                Type = StatusEffectType.Burning,
+                RemainingTurns = 2,
+                DamagePerTurn = 6
+            });
+            Console.WriteLine("你被黑暗魔法灼烧了！");
+        }
+
         Console.ForegroundColor = ConsoleColor.Red;
         Console.WriteLine($"{monster.Name} 反击，造成 {damage:0.#} 点伤害！");
         Console.ResetColor();
+    }
+
+    // 把当前状态效果转换成适合战斗界面显示的文字。
+    private static string GetStatusText(List<StatusEffect> effects)
+    {
+        if (effects.Count == 0)
+            return "无";
+
+        return string.Join("、", effects.Select(effect =>
+            effect.Type == StatusEffectType.Stunned
+                ? "眩晕"
+                : $"{effect.GetDisplayName()}({effect.RemainingTurns})"));
     }
 
     // 战斗胜利后，按概率给玩家一件随机装备。

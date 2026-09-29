@@ -7,4 +7,10 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+        <!-- 自动化测试放在 Tests 目录；游戏项目本身不编译测试源码。 -->
+        <Compile Remove="Tests/**/*.cs" />
+        <None Remove="Tests/**/*.cs" />
+    </ItemGroup>
+
 </Project>

@@ -24,11 +24,10 @@ public static class DamageCalculator
     public static double CalculateSkillDamage(
         double attack,
         Skill skill,
-        double criticalRate,
         out bool critical)
     {
         double damage = attack * skill.DamageMultiplier;
-        critical = Random.NextDouble() < criticalRate;
+        critical = Random.NextDouble() < 0.10;
         return critical ? damage * 1.5 : damage;
     }
 }

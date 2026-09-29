@@ -1,7 +1,7 @@
 namespace Console_RPG;
 
 // 技能的数据。
-// 这里负责描述技能“是什么”，例如名字、伤害倍率和消耗。
+// 这里负责描述技能“是什么”，以及学习技能需要什么条件。
 // 真正释放技能的过程放在 SkillSystem，避免数据和战斗逻辑混在一起。
 public class Skill
 {
@@ -16,9 +16,28 @@ public class Skill
     public double DamageMultiplier { get; set; } = 1;
 
     // 技能冷却回合数。
-    // v1 还没有真正实现冷却，但先把数据保留下来，方便以后扩展。
+    // 战斗中释放成功后由 Player 记录剩余冷却，回合结束时逐步减少。
+    // 冷却属于当前战斗状态，不会写入存档。
     public int Cooldown { get; set; }
 
-    // 使用一次技能需要消耗多少技能点。
+    // 技能命中后附加的状态类型；None 表示不附加状态。
+    public StatusEffectType StatusEffect { get; set; } = StatusEffectType.None;
+
+    // 状态持续的回合数。
+    public int StatusEffectDuration { get; set; }
+
+    // 中毒、燃烧等持续伤害状态每回合造成的伤害。
+    // 眩晕不使用这个数值。
+    public double StatusEffectPower { get; set; }
+
+    // 使用一次技能需要消耗多少战斗技能点。
     public int SkillPointCost { get; set; } = 1;
+
+    // 学习这个技能最低需要达到的等级。
+    // 这是技能学习条件，不影响战斗中的技能点消耗。
+    public int LearnLevel { get; set; } = 1;
+
+    // 学习这个技能需要花费的金币。
+    // 初始技能费用为 0，表示创建角色时免费获得。
+    public int LearnCostGold { get; set; }
 }

@@ -29,9 +29,52 @@ public class Equipment
     // 给玩家看的文字说明。
     public string Description { get; set; } = "";
 
+    // 装备已经强化了几次。这个数字属于装备本身，会跟着装备一起存档。
+    public int EnhancementLevel { get; set; }
+
+    // 强化最多进行 5 次，避免装备成长无限堆高。
+    public const int MaxEnhancementLevel = 5;
+
+    // 强化价格会随强化等级和稀有度增加。
+    public int GetEnhancementCost()
+    {
+        if (EnhancementLevel >= MaxEnhancementLevel) return 0;
+        int rarityMultiplier = Rarity switch
+        {
+            "稀有" => 2,
+            "史诗" => 3,
+            _ => 1
+        };
+        return 50 * (EnhancementLevel + 1) * rarityMultiplier;
+    }
+
+    // 强化一次装备。武器增加攻击，防具增加最大 HP。
+    public bool Enhance()
+    {
+        if (EnhancementLevel >= MaxEnhancementLevel) return false;
+        if (Type == "武器") AttackBonus += 4;
+        else if (Type == "防具") HpBonus += 15;
+        else return false;
+        EnhancementLevel++;
+        return true;
+    }
+
+    // 出售装备得到的金币。当前版本先用简单、容易理解的固定公式。
+    public int GetSellPrice()
+    {
+        int basePrice = Rarity switch
+        {
+            "稀有" => 50,
+            "史诗" => 100,
+            _ => 25
+        };
+        return basePrice + EnhancementLevel * 25;
+    }
+
     // 把装备的主要数值整理成一行，方便背包和掉落提示直接使用。
     public string GetAttributeText()
     {
-        return $"[{Rarity}] 攻击 +{AttackBonus:0.#} | HP +{HpBonus:0.#} | 暴击 +{CriticalRateBonus:P0} | 闪避 +{EvasionRateBonus:P0}";
+        string enhancement = EnhancementLevel > 0 ? $" +{EnhancementLevel}" : "";
+        return $"[{Rarity}{enhancement}] 攻击 +{AttackBonus:0.#} | HP +{HpBonus:0.#} | 暴击 +{CriticalRateBonus:P0} | 闪避 +{EvasionRateBonus:P0}";
     }
 }
