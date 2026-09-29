@@ -25,7 +25,7 @@ public class DamageCalculatorTests
             DamageMultiplier = 2.0
         };
 
-        double damage = DamageCalculator.CalculateSkillDamage(20, skill, out bool critical);
+        double damage = DamageCalculator.CalculateSkillDamage(20, 0.10, skill, out bool critical);
 
         // 技能基础伤害是 40；如果同时暴击，则会变成 60。
         Assert.True(damage is 40 or 60);
