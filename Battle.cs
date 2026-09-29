@@ -57,6 +57,10 @@ public static class Battle
 
         while (player.Hp > 0 && monster.Hp > 0)
         {
+            // 每个新回合先清理上一回合输出，随后再显示本回合的状态结算。
+            // 这样状态伤害和提示会一直保留到玩家看到行动菜单为止。
+            Console.Clear();
+
             // 持续伤害在对应一方开始自己的回合时结算。
             // 状态结算单独占一个区域，避免和上一回合的攻击结果挤在一起。
             double playerStatusDamage = player.ProcessStatusDamage(out List<string> playerStatusMessages);
@@ -91,7 +95,6 @@ public static class Battle
                 return true;
             }
 
-            Console.Clear();
             PrintBattleStatus(player, monster);
             Console.WriteLine("---------- 行动选择 ----------");
             Console.WriteLine("1. 普通攻击");
@@ -127,6 +130,16 @@ public static class Battle
                             Pause();
                             break;
                         }
+
+                        // 满血时使用治疗没有任何收益，因此不应该白白消耗一个战斗回合。
+                        if (player.Hp >= player.FinalMaxHp)
+                        {
+                            Console.WriteLine("当前 HP 已满，无需治疗。");
+                            turnConsumed = false;
+                            Pause();
+                            break;
+                        }
+
                         HealInBattle(player);
                         break;
                     case "4":
