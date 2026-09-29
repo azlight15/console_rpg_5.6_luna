@@ -335,7 +335,8 @@ public static class SaveManager
     {
         if (data is null || string.IsNullOrWhiteSpace(data.Name) || data.Level < 1 || data.Exp < 0
             || data.MaxHp <= 0 || data.Hp < 0 || data.Attack <= 0 || data.Treatment < 0
-            || data.TreatmentCount < 0 || data.Gold < 0 || data.SkillPoints < 0)
+            || data.TreatmentCount < 0 || data.Gold < 0 || data.SkillPoints < 0
+            || data.Inventory is null || data.Skills is null)
             return false;
 
         double armorBonus = data.Armor?.HpBonus ?? 0;
@@ -344,6 +345,10 @@ public static class SaveManager
 
         if (data.WeaponInventoryIndex is < 0 || data.WeaponInventoryIndex >= data.Inventory.Count
             || data.ArmorInventoryIndex is < 0 || data.ArmorInventoryIndex >= data.Inventory.Count)
+            return false;
+
+        if (data.WeaponInventoryIndex.HasValue != (data.Weapon is not null)
+            || data.ArmorInventoryIndex.HasValue != (data.Armor is not null))
             return false;
 
         if (data.Inventory.Any(equipment => !IsValidEquipment(equipment))
@@ -395,6 +400,5 @@ public static class SaveManager
 
         return double.IsFinite(skill.DamageMultiplier)
             && double.IsFinite(skill.StatusEffectPower);
-    }
     }
 }
