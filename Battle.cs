@@ -87,16 +87,7 @@ public static class Battle
 
             if (monster.Hp <= 0)
             {
-                monster.Hp = 0;
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"你击败了 {monster.Name}！");
-                Console.ResetColor();
-
-                UpLevel.GainExp(player, monster.ExpReward);
-                player.AddGold(monster.GoldReward);
-                Console.WriteLine($"获得金币：{monster.GoldReward}，当前金币：{player.Gold}");
-                HandleDrop(player, monster);
-                Pause();
+                HandleVictory(player, monster);
                 return true;
             }
 
@@ -191,6 +182,21 @@ public static class Battle
         }
 
         return false;
+    }
+
+    // 统一处理战斗胜利奖励，避免状态结算胜利和玩家攻击胜利出现两套重复代码。
+    private static void HandleVictory(Player player, MonsterStatistics monster)
+    {
+        monster.Hp = 0;
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine($"你击败了 {monster.Name}！");
+        Console.ResetColor();
+
+        UpLevel.GainExp(player, monster.ExpReward);
+        player.AddGold(monster.GoldReward);
+        Console.WriteLine($"获得金币：{monster.GoldReward}，当前金币：{player.Gold}");
+        HandleDrop(player, monster);
+        Pause();
     }
 
     // 每回合显示双方的关键数据，让玩家知道自己的实际战斗能力。
