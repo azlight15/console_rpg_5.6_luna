@@ -10,8 +10,8 @@ public static class EquipmentManager
     // 新角色出生时拿到一把木剑和一件旅行皮甲，方便直接开始游戏。
     public static void InitializeStarterEquipment(Player player)
     {
-        Equipment weapon = Create("木剑", "武器", 5, 0, 0, 0, "一把普通的木剑。", "普通");
-        Equipment armor = Create("旅行皮甲", "防具", 0, 25, 0, 0.02, "适合新手旅行者的轻型皮甲。", "普通");
+        Equipment weapon = Create("[普通] 木剑", "武器", 5, 0, 0, 0, "一把普通的木剑。", "普通");
+        Equipment armor = Create("[普通] 旅行皮甲", "防具", 0, 25, 0, 0.02, "适合新手旅行者的轻型皮甲。", "普通");
         player.EquipWeapon(weapon);
         player.EquipArmor(armor);
     }
