@@ -18,12 +18,12 @@ public static class LevelUp
         // 一次奖励可能让玩家连升好几级，所以这里不能只判断一次。
         while (player.Exp >= player.ExpToNextLevel)
         {
-            LevelUp(player);
+            ApplyLevelUp(player);
         }
     }
 
     // 完成一次升级，并把超过升级门槛的经验保留下来。
-    private static void LevelUp(Player player)
+    private static void ApplyLevelUp(Player player)
     {
         double requiredExp = player.ExpToNextLevel;
         player.Exp -= requiredExp;
