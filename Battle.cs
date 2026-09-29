@@ -102,7 +102,7 @@ public static class Battle
 
             Console.Clear();
             PrintBattleStatus(player, monster);
-            Console.WriteLine("选择行动：");
+            Console.WriteLine("---------- 行动选择 ----------");
             Console.WriteLine("1. 普通攻击");
             Console.WriteLine("2. 使用技能");
             Console.WriteLine("3. 治疗");
