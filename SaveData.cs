@@ -347,8 +347,10 @@ public static class SaveManager
             || data.ArmorInventoryIndex is < 0 || data.ArmorInventoryIndex >= data.Inventory.Count)
             return false;
 
-        if (data.WeaponInventoryIndex.HasValue != (data.Weapon is not null)
-            || data.ArmorInventoryIndex.HasValue != (data.Armor is not null))
+        // 旧版本存档没有装备索引，因此索引为空时仍允许继续读取；
+        // 只有索引存在却没有对应装备时才视为损坏。
+        if (data.WeaponInventoryIndex.HasValue && data.Weapon is null
+            || data.ArmorInventoryIndex.HasValue && data.Armor is null)
             return false;
 
         if (data.Inventory.Any(equipment => !IsValidEquipment(equipment))
