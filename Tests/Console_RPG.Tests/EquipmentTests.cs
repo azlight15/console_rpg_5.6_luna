@@ -111,6 +111,33 @@ public class EquipmentTests
     }
 
     [Fact]
+    public void Enhance_WithInsufficientGold_ShouldNotChangeEquipment()
+    {
+        Player player = new();
+        Equipment weapon = new() { Name = "昂贵的剑", Type = "武器", AttackBonus = 10, Rarity = "史诗" };
+        player.AddEquipment(weapon);
+
+        int oldGold = player.Gold;
+
+        Assert.False(player.EnhanceEquipment(0));
+        Assert.Equal(oldGold, player.Gold);
+        Assert.Equal(0, weapon.EnhancementLevel);
+        Assert.Equal(10, weapon.AttackBonus);
+    }
+
+    [Fact]
+    public void Enhance_EquippedWeapon_ShouldUpdateFinalAttack()
+    {
+        Player player = new();
+        Equipment weapon = new() { Name = "强化剑", Type = "武器", AttackBonus = 10 };
+        player.EquipWeapon(weapon);
+
+        Assert.True(player.EnhanceEquipment(0));
+        Assert.Equal(14, weapon.AttackBonus);
+        Assert.Equal(29, player.FinalAttack);
+    }
+
+    [Fact]
     public void SellEquipment_ShouldGiveGoldAndRemoveUnequippedItem()
     {
         Player player = new();
