@@ -10,7 +10,7 @@ public class LevelUpTests
     {
         Player player = new();
 
-        UpLevel.GainExp(player, 100);
+        LevelUp.GainExp(player, 100);
 
         Assert.Equal(2, player.Level);
         Assert.Equal(0, player.Exp);
@@ -24,7 +24,7 @@ public class LevelUpTests
     {
         Player player = new();
 
-        UpLevel.GainExp(player, 250);
+        LevelUp.GainExp(player, 250);
 
         Assert.Equal(3, player.Level);
         Assert.Equal(10, player.Exp);
@@ -37,8 +37,8 @@ public class LevelUpTests
     {
         Player player = new();
 
-        UpLevel.GainExp(player, 0);
-        UpLevel.GainExp(player, -50);
+        LevelUp.GainExp(player, 0);
+        LevelUp.GainExp(player, -50);
 
         Assert.Equal(1, player.Level);
         Assert.Equal(0, player.Exp);
@@ -51,7 +51,7 @@ public class LevelUpTests
         Assert.True(player.TryUseSkillPoint(3));
         Assert.Equal(0, player.SkillPoints);
 
-        UpLevel.GainExp(player, 100);
+        LevelUp.GainExp(player, 100);
 
         Assert.Equal(2, player.Level);
         Assert.Equal(player.MaxSkillPoints, player.SkillPoints);
