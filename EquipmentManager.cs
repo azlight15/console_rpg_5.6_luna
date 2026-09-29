@@ -31,7 +31,7 @@ public static class EquipmentManager
             Console.WriteLine("1. 查看背包");
             Console.WriteLine("2. 装备物品");
             Console.WriteLine("3. 出售装备");
-            Console.WriteLine("4. 返回");
+            Console.WriteLine("0. 返回");
             Console.Write("请选择：");
 
             switch (Console.ReadLine())
@@ -43,9 +43,12 @@ public static class EquipmentManager
                     EquipItem(player);
                     break;
                 case "3":
+                    SellItem(player);
+                    break;
+                case "0":
                     return;
                 default:
-                    Console.WriteLine("输入无效，请选择 1-4。");
+                    Console.WriteLine("输入无效，请选择 0-3。");
                     Program.Loading();
                     break;
             }
@@ -91,7 +94,8 @@ public static class EquipmentManager
         for (int i = 0; i < player.Inventory.Count; i++)
         {
             Equipment item = player.Inventory[i];
-            Console.WriteLine($"{i + 1}. {item.Name} ({item.Type}) - {item.GetAttributeText()}");
+            string equipped = item == player.Weapon || item == player.Armor ? " [已装备]" : "";
+            Console.WriteLine($"{i + 1}. {item.Name} ({item.Type}){equipped} - {item.GetAttributeText()}");
         }
         Console.WriteLine("0. 返回");
         Console.Write("请选择：");
