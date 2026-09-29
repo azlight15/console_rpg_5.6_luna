@@ -302,11 +302,27 @@ public sealed class Player
                 Inventory.Add(equipment);
         }
 
-        // 兼容旧档：v0.4 没有 Inventory 时，把当前装备补回背包。
-        if (Weapon is not null && !Inventory.Exists(item => item.Name == Weapon.Name))
-            Inventory.Add(Weapon);
-        if (Armor is not null && !Inventory.Exists(item => item.Name == Armor.Name))
-            Inventory.Add(Armor);
+        // JSON 反序列化后，Weapon/Armor 和 Inventory 中的装备可能会变成两个不同对象。
+        // 这里重新指向背包里的那一份，保证“已装备”判断、出售保护和强化都操作同一件装备。
+        if (Weapon is not null)
+        {
+            Equipment? savedWeapon = Inventory.FirstOrDefault(item =>
+                item.Type == Weapon.Type && item.Name == Weapon.Name);
+            if (savedWeapon is not null)
+                Weapon = savedWeapon;
+            else
+                Inventory.Add(Weapon);
+        }
+
+        if (Armor is not null)
+        {
+            Equipment? savedArmor = Inventory.FirstOrDefault(item =>
+                item.Type == Armor.Type && item.Name == Armor.Name);
+            if (savedArmor is not null)
+                Armor = savedArmor;
+            else
+                Inventory.Add(Armor);
+        }
 
         SkillPoints = System.Math.Clamp(skillPoints, 0, MaxSkillPoints);
         ResetSkillCooldowns();
