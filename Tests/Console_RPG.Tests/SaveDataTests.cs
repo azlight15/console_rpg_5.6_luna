@@ -135,6 +135,30 @@ public class SaveDataTests
     }
 
     [Fact]
+    public void FromPlayerAndApplyTo_ShouldPreserveEquipmentEnhancement()
+    {
+        Player source = new();
+        Equipment weapon = new()
+        {
+            Name = "强化剑",
+            Type = "武器",
+            AttackBonus = 10
+        };
+
+        source.AddEquipment(weapon);
+        Assert.True(source.EnhanceEquipment(0));
+        Assert.Equal(1, weapon.EnhancementLevel);
+
+        SaveData save = SaveData.FromPlayer(source);
+
+        Player restored = new();
+        save.ApplyTo(restored);
+
+        Assert.Equal(1, restored.Inventory[0].EnhancementLevel);
+        Assert.Equal(14, restored.Inventory[0].AttackBonus);
+    }
+
+    [Fact]
     public void DeserializeOldSaveWithoutV1Resources_ShouldUseDefaults()
     {
         SaveData? save = System.Text.Json.JsonSerializer.Deserialize<SaveData>(
@@ -144,5 +168,4 @@ public class SaveDataTests
         Assert.Equal(100, save!.Gold);
         Assert.Equal(3, save.SkillPoints);
     }
-
 }
