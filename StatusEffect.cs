@@ -1,5 +1,3 @@
-using System;
-
 namespace Console_RPG;
 
 public enum StatusEffectType
