@@ -165,7 +165,7 @@ public static class Battle
                 Console.WriteLine($"你击败了 {monster.Name}！");
                 Console.ResetColor();
 
-                UpLevel.GainExp(player, monster.ExpReward);
+                LevelUp.GainExp(player, monster.ExpReward);
                 player.AddGold(monster.GoldReward);
                 Console.WriteLine($"获得金币：{monster.GoldReward}，当前金币：{player.Gold}");
                 HandleDrop(player, monster);
