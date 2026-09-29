@@ -8,7 +8,7 @@ namespace Console_RPG;
 public static class MonsterFactory
 {
     // 根据当前玩家等级随机生成一只怪物。
-    public static MonsterStatistics Create(Player player)
+    public static MonsterStatistics Create(Player player, bool allowElite = true)
     {
         int playerLevel = Math.Max(1, player.Level);
 
@@ -38,7 +38,7 @@ public static class MonsterFactory
 
         // 10% 的概率把普通怪物变成精英怪。
         // 精英怪仍然保留原本的种类和定位，只是等级、属性和奖励更高。
-        if (Random.Shared.Next(100) < 10)
+        if (allowElite && Random.Shared.Next(100) < 10)
         {
             monster.Name = $"[精英] {monster.Name}";
             monster.Type = "精英 " + monster.Type;
