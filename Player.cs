@@ -271,7 +271,9 @@ public sealed class Player
         IEnumerable<Skill>? skills,
         IEnumerable<Equipment>? inventory = null,
         int gold = 100,
-        int skillPoints = 3)
+        int skillPoints = 3,
+        int? weaponInventoryIndex = null,
+        int? armorInventoryIndex = null)
     {
         MaxHp = System.Math.Max(1, maxHp);
         Attack = System.Math.Max(1, attack);
@@ -289,6 +291,9 @@ public sealed class Player
                 LearnSkill(skill);
         }
 
+        int? savedWeaponIndex = weaponInventoryIndex;
+        int? savedArmorIndex = armorInventoryIndex;
+
         Inventory.Clear();
         if (inventory is not null)
         {
@@ -296,24 +301,38 @@ public sealed class Player
                 Inventory.Add(equipment);
         }
 
-        if (Weapon is not null)
+        // 新存档优先使用背包索引，哪怕有多件同名装备也能准确恢复。
+        // 没有索引的旧存档继续使用名称匹配，保证历史存档还能读取。
+        if (weapon is not null)
         {
-            Equipment? savedWeapon = Inventory.FirstOrDefault(item =>
-                item.Type == Weapon.Type && item.Name == Weapon.Name);
+            Equipment? savedWeapon = savedWeaponIndex is >= 0 && savedWeaponIndex < Inventory.Count
+                ? Inventory[savedWeaponIndex.Value]
+                : Inventory.FirstOrDefault(item =>
+                    item.Type == weapon.Type && item.Name == weapon.Name);
+
             if (savedWeapon is not null)
                 Weapon = savedWeapon;
             else
+            {
+                Weapon = weapon;
                 Inventory.Add(Weapon);
+            }
         }
 
-        if (Armor is not null)
+        if (armor is not null)
         {
-            Equipment? savedArmor = Inventory.FirstOrDefault(item =>
-                item.Type == Armor.Type && item.Name == Armor.Name);
+            Equipment? savedArmor = savedArmorIndex is >= 0 && savedArmorIndex < Inventory.Count
+                ? Inventory[savedArmorIndex.Value]
+                : Inventory.FirstOrDefault(item =>
+                    item.Type == armor.Type && item.Name == armor.Name);
+
             if (savedArmor is not null)
                 Armor = savedArmor;
             else
+            {
+                Armor = armor;
                 Inventory.Add(Armor);
+            }
         }
 
         SkillPoints = System.Math.Clamp(skillPoints, 0, MaxSkillPoints);
