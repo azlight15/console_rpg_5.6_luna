@@ -18,9 +18,14 @@ public static class Battle
             return;
         }
 
+        bool firstBattle = true;
+
         while (player.Hp > 0)
         {
-            MonsterStatistics monster = MonsterFactory.Create(player);
+            // 第一次战斗先保证玩家能看到正常怪物和完整的新手流程。
+            // 从第二场开始才进入正常的 10% 精英怪随机机制。
+            MonsterStatistics monster = MonsterFactory.Create(player, !firstBattle);
+            firstBattle = false;
             bool victory = Start(player, monster);
 
             if (!victory || player.Hp <= 0)
