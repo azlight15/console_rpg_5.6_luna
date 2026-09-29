@@ -180,8 +180,7 @@ public static class Program
 
     public static void Loading()
     {
-        Console.WriteLine("
-按任意键继续...");
+        Console.WriteLine("\n按任意键继续...");
         Console.ReadKey(true);
     }
 }
