@@ -53,9 +53,14 @@ public static class Battle
         while (player.Hp > 0 && monster.Hp > 0)
         {
             // 持续伤害在对应一方开始自己的回合时结算。
+            // 状态结算单独占一个区域，避免和上一回合的攻击结果挤在一起。
             double playerStatusDamage = player.ProcessStatusDamage(out List<string> playerStatusMessages);
-            foreach (string message in playerStatusMessages)
-                Console.WriteLine(message);
+            if (playerStatusMessages.Count > 0)
+            {
+                Console.WriteLine("========== 状态结算 ==========");
+                foreach (string message in playerStatusMessages)
+                    Console.WriteLine(message);
+            }
             if (playerStatusDamage > 0)
                 Console.WriteLine($"你受到状态效果影响，剩余 HP：{player.Hp:0.#}/{player.FinalMaxHp:0.#}。");
 
@@ -66,8 +71,12 @@ public static class Battle
             }
 
             double monsterStatusDamage = monster.ProcessStatusDamage(out List<string> monsterStatusMessages);
-            foreach (string message in monsterStatusMessages)
-                Console.WriteLine(message);
+            if (monsterStatusMessages.Count > 0)
+            {
+                Console.WriteLine("---------- 怪物状态 ----------");
+                foreach (string message in monsterStatusMessages)
+                    Console.WriteLine(message);
+            }
             if (monsterStatusDamage > 0)
                 Console.WriteLine($"{monster.Name} 受到状态效果影响，剩余 HP：{monster.Hp:0.#}/{monster.MaxHp:0.#}。");
 
