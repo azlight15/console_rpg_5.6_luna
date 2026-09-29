@@ -11,6 +11,7 @@ public static class Shop
     private const int SkillPointPrice = 30;
 
     // 显示商店主菜单。
+    // 所有子菜单统一使用 0 作为返回键，避免不同页面的操作规则不一致。
     public static void ShowMenu(Player player)
     {
         while (true)
@@ -24,7 +25,7 @@ public static class Shop
             Console.WriteLine("3. 猎人短剑（80 金币）");
             Console.WriteLine("4. 铁甲（100 金币）");
             Console.WriteLine("5. 装备强化");
-            Console.WriteLine("6. 返回");
+            Console.WriteLine("0. 返回");
             Console.Write("请选择：");
 
             switch (Console.ReadLine())
@@ -34,9 +35,9 @@ public static class Shop
                 case "3": BuyWeapon(player); break;
                 case "4": BuyArmor(player); break;
                 case "5": EnhanceEquipment(player); break;
-                case "6": return;
+                case "0": return;
                 default:
-                    Console.WriteLine("输入无效，请选择 1-6。");
+                    Console.WriteLine("输入无效，请选择 0-5。");
                     Program.Loading();
                     break;
             }
