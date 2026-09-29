@@ -21,6 +21,12 @@ public sealed class SaveData
     public int TreatmentCount { get; set; }
     public Equipment? Weapon { get; set; }
     public Equipment? Armor { get; set; }
+
+    // 新版本用背包索引记录当前装备，避免出现两件同名装备时读档对错对象。
+    // Weapon/Armor 字段继续保留，用于兼容旧版本存档。
+    public int? WeaponInventoryIndex { get; set; }
+    public int? ArmorInventoryIndex { get; set; }
+
     public List<Equipment> Inventory { get; set; } = new();
     public List<Skill> Skills { get; set; } = new();
 
@@ -43,6 +49,12 @@ public sealed class SaveData
             TreatmentCount = player.TreatmentCount,
             Weapon = player.Weapon,
             Armor = player.Armor,
+            WeaponInventoryIndex = player.Weapon is null
+                ? null
+                : player.Inventory.FindIndex(item => ReferenceEquals(item, player.Weapon)),
+            ArmorInventoryIndex = player.Armor is null
+                ? null
+                : player.Inventory.FindIndex(item => ReferenceEquals(item, player.Armor)),
             Inventory = new List<Equipment>(player.Inventory),
             Skills = new List<Skill>(player.Skills),
             Gold = player.Gold,
@@ -325,6 +337,62 @@ public static class SaveManager
             return false;
 
         double armorBonus = data.Armor?.HpBonus ?? 0;
-        return data.Hp <= data.MaxHp + armorBonus;
+        if (data.Hp > data.MaxHp + armorBonus)
+            return false;
+
+        if (data.WeaponInventoryIndex is < 0 || data.WeaponInventoryIndex >= data.Inventory.Count
+            || data.ArmorInventoryIndex is < 0 || data.ArmorInventoryIndex >= data.Inventory.Count)
+            return false;
+
+        if (data.Inventory.Any(equipment => !IsValidEquipment(equipment))
+            || data.Weapon is not null && !IsValidEquipment(data.Weapon)
+            || data.Armor is not null && !IsValidEquipment(data.Armor))
+            return false;
+
+        if (data.Skills.Any(skill => !IsValidSkill(skill)))
+            return false;
+
+        return true;
+    }
+
+    // 装备属于存档的重要对象，至少要阻止明显非法数值进入运行时。
+    private static bool IsValidEquipment(Equipment? equipment)
+    {
+        if (equipment is null
+            || string.IsNullOrWhiteSpace(equipment.Name)
+            || equipment.Type is not ("武器" or "防具")
+            || equipment.EnhancementLevel < 0
+            || equipment.EnhancementLevel > Equipment.MaxEnhancementLevel
+            || equipment.AttackBonus < 0
+            || equipment.HpBonus < 0
+            || equipment.CriticalRateBonus < 0
+            || equipment.CriticalRateBonus > 1
+            || equipment.EvasionRateBonus < 0
+            || equipment.EvasionRateBonus > 1)
+            return false;
+
+        return double.IsFinite(equipment.AttackBonus)
+            && double.IsFinite(equipment.HpBonus)
+            && double.IsFinite(equipment.CriticalRateBonus)
+            && double.IsFinite(equipment.EvasionRateBonus);
+    }
+
+    // 技能也是存档数据的一部分，避免损坏的技能直接进入战斗。
+    private static bool IsValidSkill(Skill? skill)
+    {
+        if (skill is null
+            || string.IsNullOrWhiteSpace(skill.Name)
+            || skill.DamageMultiplier < 0
+            || skill.Cooldown < 0
+            || skill.SkillPointCost < 0
+            || skill.LearnLevel < 1
+            || skill.LearnCostGold < 0
+            || skill.StatusEffectDuration < 0
+            || skill.StatusEffectPower < 0)
+            return false;
+
+        return double.IsFinite(skill.DamageMultiplier)
+            && double.IsFinite(skill.StatusEffectPower);
+    }
     }
 }
